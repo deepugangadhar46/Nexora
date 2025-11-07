@@ -15,7 +15,7 @@ class NexoraException(Exception):
 
 
 class AIServiceException(NexoraException):
-    """AI service related errors (DeepSeek, Groq, Kimi)"""
+    """AI service related errors (MiniMax, Groq, Kimi)"""
     pass
 
 

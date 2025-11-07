@@ -26,15 +26,15 @@ async def test_agent():
         print("   ✓ Agent initialized successfully")
         print()
         
-        # Test DeepSeek connection
-        print("2. Testing DeepSeek API connection...")
-        test_response = await agent.deepseek.generate_code(
-            prompt="Say 'Hello from DeepSeek!'",
+        # Test MiniMax connection
+        print("2. Testing MiniMax API connection...")
+        test_response = await agent.get_ai_response(
+            prompt="Say 'Hello from MiniMax!'",
+            model=AIModel.MINIMAX,
             system_prompt="You are a helpful assistant.",
-            temperature=0.7,
-            max_tokens=50
+            stream=False
         )
-        print(f"   ✓ DeepSeek response: {test_response[:100]}...")
+        print(f"   ✓ MiniMax response: {test_response[:100] if isinstance(test_response, str) else 'OK'}...")
         print()
         
         # Test simple MVP generation
@@ -100,7 +100,7 @@ async def test_agent():
         print()
         print("Troubleshooting:")
         print("1. Check that all API keys are set in .env file:")
-        print("   - DEEPSEEK_API_KEY")
+        print("   - HF_TOKEN")
         print("   - FIRECRAWL_API_KEY")
         print("   - E2B_API_KEY")
         print("2. Verify your internet connection")
@@ -121,7 +121,7 @@ async def test_api_keys():
     print()
     
     keys = {
-        "DEEPSEEK_API_KEY": os.getenv("DEEPSEEK_API_KEY"),
+        "HF_TOKEN": os.getenv("HF_TOKEN"),
         "FIRECRAWL_API_KEY": os.getenv("FIRECRAWL_API_KEY"),
         "E2B_API_KEY": os.getenv("E2B_API_KEY")
     }

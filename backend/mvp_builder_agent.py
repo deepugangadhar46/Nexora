@@ -3,7 +3,7 @@ MVP Builder Agent - AI Code Generation System
 ============================================
 
 A comprehensive AI-powered code generation agent that replicates open-lovable functionality
-with FastAPI backend, supporting DeepSeek, Groq, and Kimi AI models.
+with FastAPI backend, supporting MiniMax, Groq, and Kimi AI models.
 
 Author: NEXORA Team
 Version: 1.0.0
@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 class AIModel(Enum):
     """Supported AI models"""
-    DEEPSEEK = "deepseek"
+    MINIMAX = "minimax"
     GROQ = "groq"
     KIMI = "kimi"
 
@@ -117,7 +117,7 @@ class ConversationState:
 class CodeGenerationRequest(BaseModel):
     """Code generation request model"""
     prompt: str = Field(..., description="User prompt for code generation")
-    model: str = Field(default="deepseek", description="AI model to use")
+    model: str = Field(default="minimax", description="AI model to use")
     context: Optional[Dict[str, Any]] = Field(default=None, description="Additional context")
     is_edit: bool = Field(default=False, description="Whether this is an edit operation")
     style: Optional[str] = Field(default="modern", description="Design style preference")
@@ -150,15 +150,15 @@ class MVPBuilderAgent:
     
     def __init__(self):
         """Initialize the MVP Builder Agent"""
-        self.deepseek_api_key = os.getenv("HF_TOKEN")  # Changed to HF_TOKEN for Hugging Face
+        self.minimax_api_key = os.getenv("HF_TOKEN")  # HF_TOKEN for Hugging Face
         self.groq_api_key = os.getenv("GROQ_API_KEY")
         self.kimi_api_key = os.getenv("KIMI_API_KEY")
         self.firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
         self.e2b_api_key = os.getenv("E2B_API_KEY")
         
         # Validate required API keys
-        if not self.deepseek_api_key:
-            logger.warning("HF_TOKEN not found - DeepSeek AI model will not be available")
+        if not self.minimax_api_key:
+            logger.warning("HF_TOKEN not found - MiniMax AI model will not be available")
         if not self.groq_api_key:
             logger.warning("GROQ_API_KEY not found - Groq AI model will not be available")
         if not self.kimi_api_key:
@@ -170,8 +170,8 @@ class MVPBuilderAgent:
             
         # Check if at least one AI model is available
         available_models = []
-        if self.deepseek_api_key:
-            available_models.append("DeepSeek")
+        if self.minimax_api_key:
+            available_models.append("MiniMax")
         if self.groq_api_key:
             available_models.append("Groq")
         if self.kimi_api_key:
@@ -188,9 +188,9 @@ class MVPBuilderAgent:
         
         # AI model configurations
         self.model_configs = {
-            AIModel.DEEPSEEK: {
+            AIModel.MINIMAX: {
                 "base_url": "https://router.huggingface.co/v1",
-                "model": "deepseek-ai/DeepSeek-V3.1",
+                "model": "MiniMaxAI/MiniMax-M2",
                 "max_tokens": 32000,  # Hugging Face limit is 32768, using 32000 for safety
                 "retry_on_rate_limit": True,
                 "retry_delay": 5,
@@ -227,7 +227,7 @@ class MVPBuilderAgent:
     async def get_ai_response(
         self, 
         prompt: str, 
-        model: AIModel = AIModel.DEEPSEEK,
+        model: AIModel = AIModel.MINIMAX,
         system_prompt: Optional[str] = None,
         stream: bool = False,
         retry_count: int = 0
@@ -239,8 +239,8 @@ class MVPBuilderAgent:
             logger.info(f"🤖 AI Request - Model: {model.value.upper()} | Endpoint: {config['base_url']} | Model ID: {config['model']} | Stream: {stream}")
             
             # Select API key based on model
-            if model == AIModel.DEEPSEEK:
-                api_key = self.deepseek_api_key
+            if model == AIModel.MINIMAX:
+                api_key = self.minimax_api_key
             elif model == AIModel.GROQ:
                 api_key = self.groq_api_key
             elif model == AIModel.KIMI:
@@ -272,9 +272,12 @@ class MVPBuilderAgent:
                 "presence_penalty": config.get("presence_penalty", 0.2)
             }
             
+            # Determine endpoint based on model (all use OpenAI-compatible format)
+            endpoint = f"{config['base_url']}/chat/completions"
+            
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{config['base_url']}/chat/completions",
+                    endpoint,
                     headers=headers,
                     json=payload
                 ) as response:
@@ -349,16 +352,16 @@ class MVPBuilderAgent:
             
             # Determine available fallback models
             fallback_models = []
-            if model == AIModel.DEEPSEEK:
+            if model == AIModel.MINIMAX:
                 pass
             elif model == AIModel.GROQ:
                 if self.kimi_api_key:
                     fallback_models.append(AIModel.KIMI)
-                if self.deepseek_api_key:
-                    fallback_models.append(AIModel.DEEPSEEK)
+                if self.minimax_api_key:
+                    fallback_models.append(AIModel.MINIMAX)
             elif model == AIModel.KIMI:
-                if self.deepseek_api_key:
-                    fallback_models.append(AIModel.DEEPSEEK)
+                if self.minimax_api_key:
+                    fallback_models.append(AIModel.MINIMAX)
                 if self.groq_api_key:
                     fallback_models.append(AIModel.GROQ)
             
@@ -379,7 +382,7 @@ class MVPBuilderAgent:
                     continue
             
             # If all fallbacks failed, raise the original error with helpful message
-            available_models = [m for m in [AIModel.DEEPSEEK, AIModel.GROQ, AIModel.KIMI] 
+            available_models = [m for m in [AIModel.MINIMAX, AIModel.GROQ, AIModel.KIMI] 
                              if getattr(self, f"{m.value}_api_key")]
             if not available_models:
                 raise Exception("No AI models available. Please configure at least one API key: HF_TOKEN, GROQ_API_KEY, or KIMI_API_KEY")
@@ -602,7 +605,7 @@ class MVPBuilderAgent:
     async def generate_code_stream(
         self, 
         prompt: str, 
-        model: str = "deepseek",
+        model: str = "minimax",
         context: Optional[Dict[str, Any]] = None,
         is_edit: bool = False
     ) -> AsyncGenerator[Dict[str, Any], None]:

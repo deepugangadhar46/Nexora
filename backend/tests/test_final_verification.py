@@ -11,42 +11,42 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DEEPSEEK_KEY = os.getenv("DEEPSEEK_API_KEY")
+MINIMAX_KEY = os.getenv("HF_TOKEN")
 E2B_KEY = os.getenv("E2B_API_KEY")
 
 print("\n" + "="*70)
 print("  NEXORA MVP BUILDER - FINAL VERIFICATION TEST")
 print("="*70 + "\n")
 
-async def test_1_deepseek():
-    """Test DeepSeek API"""
-    print("[ 1/5 ] Testing DeepSeek API Connection...")
+async def test_1_minimax():
+    """Test MiniMax API"""
+    print("[ 1/5 ] Testing MiniMax API Connection...")
     
-    if not DEEPSEEK_KEY:
-        print("    ⚠️  No DeepSeek API key - SKIPPED")
+    if not MINIMAX_KEY:
+        print("    ⚠️  No MiniMax API key - SKIPPED")
         return False
     
     try:
-        headers = {"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"}
+        headers = {"Authorization": f"Bearer {MINIMAX_KEY}", "Content-Type": "application/json"}
         payload = {
-            "model": "deepseek-chat",
+            "model": "MiniMaxAI/MiniMax-M2",
             "messages": [{"role": "user", "content": "Say 'OK'"}],
             "max_tokens": 10
         }
         
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                "https://api.deepseek.com/chat/completions",
+                "https://router.huggingface.co/v1/chat/completions",
                 headers=headers,
                 json=payload,
                 timeout=aiohttp.ClientTimeout(total=15)
             ) as response:
                 if response.ok:
                     data = await response.json()
-                    print(f"    ✅ DeepSeek API working - Response: {data['choices'][0]['message']['content']}")
+                    print(f"    ✅ MiniMax API working - Response: {data['choices'][0]['message']['content']}")
                     return True
                 else:
-                    print(f"    ❌ DeepSeek API failed - Status: {response.status}")
+                    print(f"    ❌ MiniMax API failed - Status: {response.status}")
                     return False
     except Exception as e:
         print(f"    ❌ Exception: {str(e)[:50]}")
@@ -185,7 +185,7 @@ async def test_5_chat():
 async def main():
     results = []
     
-    results.append(await test_1_deepseek())
+    results.append(await test_1_minimax())
     results.append(await test_2_backend())
     results.append(await test_3_mvp_agent())
     results.append(await test_4_streaming())
@@ -200,7 +200,7 @@ async def main():
     total = len(results)
     
     tests = [
-        "DeepSeek API",
+        "MiniMax API",
         "Backend Server",
         "MVP Agent",
         "Streaming Generation",
@@ -215,7 +215,7 @@ async def main():
     
     if passed == total:
         print("\n  🎉 ALL SYSTEMS GO! MVP Builder is fully operational.")
-        print("  ✓ DeepSeek AI integration working")
+        print("  ✓ MiniMax AI integration working")
         print("  ✓ Streaming code generation working")
         print("  ✓ Live preview ready (E2B sandbox)")
         print("  ✓ Chat interface functional")

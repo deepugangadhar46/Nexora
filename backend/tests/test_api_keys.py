@@ -57,7 +57,7 @@ async def main():
     # Check environment variables
     print("\n🔍 Checking environment variables...")
     api_keys = {
-        "DEEPSEEK_API_KEY": os.getenv("DEEPSEEK_API_KEY"),
+        "HF_TOKEN": os.getenv("HF_TOKEN"),
         "GROQ_API_KEY": os.getenv("GROQ_API_KEY"),
         "KIMI_API_KEY": os.getenv("KIMI_API_KEY"),
         "E2B_API_KEY": os.getenv("E2B_API_KEY"),
@@ -85,9 +85,9 @@ async def main():
     print("\n🤖 Testing AI Models...")
     test_results = {}
     
-    # Test DeepSeek
-    if api_keys["DEEPSEEK_API_KEY"]:
-        test_results["DeepSeek"] = await test_api_key(agent, AIModel.DEEPSEEK, "DeepSeek")
+    # Test MiniMax
+    if api_keys["HF_TOKEN"]:
+        test_results["MiniMax"] = await test_api_key(agent, AIModel.MINIMAX, "MiniMax")
     
     # Test Groq
     if api_keys["GROQ_API_KEY"]:
@@ -116,7 +116,7 @@ async def main():
     # Recommendations
     print("\n💡 Recommendations:")
     if not working_models:
-        print("   - Configure at least one AI API key (DeepSeek, Groq, or Kimi)")
+        print("   - Configure at least one AI API key (MiniMax, Groq, or Kimi)")
         print("   - Check your .env file and ensure API keys are valid")
     elif len(working_models) == 1:
         print("   - Consider configuring additional AI models for better fallback support")

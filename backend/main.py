@@ -1198,7 +1198,7 @@ Be conversational but professional. Keep responses under 4 sentences."""
         try:
             async for chunk in mvp_builder_agent.get_ai_response(
                 prompt=chat_request.message,
-                model=AIModel.DEEPSEEK,
+                model=AIModel.MINIMAX,
                 system_prompt=system_prompt,
                 stream=False
             ):
@@ -1298,9 +1298,9 @@ async def stream_mvp_generation(request: Request, mvp_request: MVPStreamRequest)
 Remember: The system expects 3-7 complete files. Don't stop until all files are done!"""
                 
                 # Send generation start status with model info
-                yield f"data: {json.dumps({'type': 'status', 'message': '🚀 Using DeepSeek V3.1 (32K context) - Generating modern HTML/CSS/JS application (3-7 files)...'})}\n\n"
+                yield f"data: {json.dumps({'type': 'status', 'message': '🚀 Using MiniMax M2 (32K context) - Generating modern HTML/CSS/JS application (3-7 files)...'})}\n\n"
                 
-                logger.info(f"🚀 Using DeepSeek V3.1 (Hugging Face) with 32K token context for comprehensive MVP generation")
+                logger.info(f"🚀 Using MiniMax M2 (Hugging Face) with 32K token context for comprehensive MVP generation")
                 
                 # Start code generation with streaming
                 content_buffer = ""
@@ -1318,7 +1318,7 @@ Remember: The system expects 3-7 complete files. Don't stop until all files are 
                 
                 async for chunk in mvp_builder_agent.get_ai_response(
                     prompt=enhanced_prompt,
-                    model=AIModel.DEEPSEEK,
+                    model=AIModel.MINIMAX,
                     system_prompt=system_prompt,
                     stream=True
                 ):
@@ -2631,12 +2631,12 @@ ALWAYS USE:
 <file path="...">code</file>"""
         
         # Generate code using AI with dynamic prompt
-        logger.info(f"🚀 Using DeepSeek V3.1 (Hugging Face) for MVP Development: {request.productName}")
+        logger.info(f"🚀 Using MiniMax M2 (Hugging Face) for MVP Development: {request.productName}")
         
         full_response = ""
         async for chunk in mvp_builder_agent.get_ai_response(
             prompt=user_prompt,
-            model=AIModel.DEEPSEEK,
+            model=AIModel.MINIMAX,
             system_prompt=system_prompt,
             stream=False
         ):
@@ -2677,7 +2677,7 @@ ALWAYS USE:
             "filesDict": files_dict,  # Keep dict format for backward compatibility
             "fileCount": len(files_array),
             "metadata": {
-                "model": "DeepSeek-V3",
+                "model": "MiniMax-M2",
                 "provider": "Hugging Face",
                 "reason": "Optimized for code generation",
                 "timestamp": datetime.utcnow().isoformat()
@@ -2751,7 +2751,7 @@ REFINEMENT SPECIFIC RULES:
         full_response = ""
         async for chunk in mvp_builder_agent.get_ai_response(
             prompt=user_prompt,
-            model=AIModel.DEEPSEEK,
+            model=AIModel.MINIMAX,
             system_prompt=system_prompt,
             stream=False
         ):
@@ -2909,7 +2909,7 @@ export default {component_name};
         full_response = ""
         async for chunk in mvp_builder_agent.get_ai_response(
             prompt=user_prompt,
-            model=AIModel.DEEPSEEK,
+            model=AIModel.MINIMAX,
             system_prompt=system_prompt,
             stream=False
         ):
@@ -3204,7 +3204,7 @@ async def mvp_builder_health():
             "status": "ok",
             "agent": "initialized",
             "models": {
-                "deepseek": bool(mvp_builder_agent.deepseek_api_key),
+                "minimax": bool(mvp_builder_agent.minimax_api_key),
                 "groq": bool(mvp_builder_agent.groq_api_key),
                 "kimi": bool(mvp_builder_agent.kimi_api_key)
             },

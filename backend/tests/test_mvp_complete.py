@@ -1,6 +1,6 @@
 """
 Comprehensive MVP Builder Test Suite
-Tests: DeepSeek API, Streaming, E2B Sandbox, File Generation
+Tests: MiniMax API, Streaming, E2B Sandbox, File Generation
 """
 
 import asyncio
@@ -13,7 +13,7 @@ load_dotenv()
 
 # Test configuration
 BASE_URL = "http://localhost:8000"
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+MINIMAX_API_KEY = os.getenv("HF_TOKEN")
 E2B_API_KEY = os.getenv("E2B_API_KEY")
 
 class Colors:
@@ -30,25 +30,25 @@ def print_test(name, status, message=""):
     if message:
         print(f"  {message}")
 
-async def test_deepseek_direct():
-    """Test 1: Direct DeepSeek API connection"""
-    print(f"\n{Colors.BLUE}=== Test 1: DeepSeek API Direct Connection ==={Colors.END}")
+async def test_minimax_direct():
+    """Test 1: Direct MiniMax API connection"""
+    print(f"\n{Colors.BLUE}=== Test 1: MiniMax API Direct Connection ==={Colors.END}")
     
-    if not DEEPSEEK_API_KEY:
-        print_test("DeepSeek API Key", False, "API key not found in .env")
+    if not MINIMAX_API_KEY:
+        print_test("MiniMax API Key", False, "API key not found in .env")
         return False
     
     try:
         headers = {
-            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+            "Authorization": f"Bearer {MINIMAX_API_KEY}",
             "Content-Type": "application/json"
         }
         
         payload = {
-            "model": "deepseek-chat",
+            "model": "MiniMaxAI/MiniMax-M2",
             "messages": [
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "Say 'Hello from DeepSeek!' in one sentence."}
+                {"role": "user", "content": "Say 'Hello from MiniMax!' in one sentence."}
             ],
             "max_tokens": 50,
             "stream": False
@@ -56,7 +56,7 @@ async def test_deepseek_direct():
         
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                "https://api.deepseek.com/chat/completions",
+                "https://router.huggingface.co/v1/chat/completions",
                 headers=headers,
                 json=payload,
                 timeout=aiohttp.ClientTimeout(total=30)
@@ -64,14 +64,14 @@ async def test_deepseek_direct():
                 if response.ok:
                     data = await response.json()
                     content = data['choices'][0]['message']['content']
-                    print_test("DeepSeek API Connection", True, f"Response: {content}")
+                    print_test("MiniMax API Connection", True, f"Response: {content}")
                     return True
                 else:
                     error = await response.text()
-                    print_test("DeepSeek API Connection", False, f"Error: {error}")
+                    print_test("MiniMax API Connection", False, f"Error: {error}")
                     return False
     except Exception as e:
-        print_test("DeepSeek API Connection", False, f"Exception: {str(e)}")
+        print_test("MiniMax API Connection", False, f"Exception: {str(e)}")
         return False
 
 async def test_backend_health():
@@ -278,7 +278,7 @@ async def run_all_tests():
     results = []
     
     # Run tests
-    results.append(("DeepSeek API", await test_deepseek_direct()))
+    results.append(("MiniMax API", await test_minimax_direct()))
     results.append(("Backend Health", await test_backend_health()))
     results.append(("MVP Agent Init", await test_mvp_agent_initialization()))
     results.append(("Chat Endpoint", await test_chat_endpoint()))

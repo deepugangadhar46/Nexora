@@ -3,7 +3,7 @@ AI Model Router
 ===============
 
 Intelligent routing system for AI models based on task type and availability.
-- DeepSeek: Primary for MVP generation (high token limit, good for code)
+- MiniMax: Primary for MVP generation (high token limit, good for code)
 - Groq: Primary for other tasks (fast inference, good for analysis)
 - Kimi: Fallback for all tasks
 
@@ -35,7 +35,7 @@ class TaskType(Enum):
 
 class AIModelType(Enum):
     """Available AI models"""
-    DEEPSEEK = "deepseek"
+    MINIMAX = "minimax"
     GROQ = "groq"
     KIMI = "kimi"
 
@@ -48,12 +48,12 @@ class ModelRouter:
     def __init__(self):
         """Initialize model router with API keys and configuration"""
         # Load API keys
-        self.deepseek_key = os.getenv("HF_TOKEN")
+        self.minimax_key = os.getenv("HF_TOKEN")
         self.groq_key = os.getenv("GROQ_API_KEY")
         self.kimi_key = os.getenv("KIMI_API_KEY")
         
         # Load configuration
-        self.mvp_primary = os.getenv("MVP_PRIMARY_MODEL", "deepseek").lower()
+        self.mvp_primary = os.getenv("MVP_PRIMARY_MODEL", "minimax").lower()
         self.general_primary = os.getenv("GENERAL_PRIMARY_MODEL", "groq").lower()
         self.fallback_model = os.getenv("FALLBACK_MODEL", "kimi").lower()
         
@@ -74,8 +74,8 @@ class ModelRouter:
         """Check which AI models are available based on API keys"""
         available = []
         
-        if self.deepseek_key:
-            available.append("deepseek")
+        if self.minimax_key:
+            available.append("minimax")
         if self.groq_key:
             available.append("groq")
         if self.kimi_key:
@@ -110,7 +110,7 @@ class ModelRouter:
         
         # Determine primary model based on task type
         if task_type in [TaskType.MVP_GENERATION, TaskType.CODE_EDIT]:
-            # MVP and code tasks: Use DeepSeek (high token limit)
+            # MVP and code tasks: Use MiniMax (high token limit)
             primary = self.mvp_primary
             secondary = self.general_primary
         else:
@@ -153,10 +153,10 @@ class ModelRouter:
             Dict with model configuration
         """
         configs = {
-            "deepseek": {
+            "minimax": {
                 "base_url": "https://router.huggingface.co/v1",
-                "model": "deepseek-ai/DeepSeek-V3",
-                "api_key": self.deepseek_key,
+                "model": "MiniMaxAI/MiniMax-M2",
+                "api_key": self.minimax_key,
                 "max_tokens": 32000,
                 "temperature": 0.7,
                 "top_p": 0.95,
@@ -190,7 +190,7 @@ class ModelRouter:
     def get_api_key(self, model_name: str) -> Optional[str]:
         """Get API key for a specific model"""
         keys = {
-            "deepseek": self.deepseek_key,
+            "minimax": self.minimax_key,
             "groq": self.groq_key,
             "kimi": self.kimi_key
         }
@@ -249,18 +249,18 @@ class ModelRouter:
             List of model names in priority order
         """
         recommendations = {
-            TaskType.MVP_GENERATION: ["deepseek", "groq", "kimi"],
-            TaskType.CODE_EDIT: ["deepseek", "groq", "kimi"],
-            TaskType.IDEA_VALIDATION: ["groq", "deepseek", "kimi"],
-            TaskType.MARKET_RESEARCH: ["groq", "kimi", "deepseek"],
-            TaskType.BUSINESS_PLANNING: ["groq", "deepseek", "kimi"],
-            TaskType.PITCH_DECK: ["groq", "deepseek", "kimi"],
-            TaskType.CHAT: ["groq", "kimi", "deepseek"],
-            TaskType.GENERAL: ["groq", "deepseek", "kimi"]
+            TaskType.MVP_GENERATION: ["minimax", "groq", "kimi"],
+            TaskType.CODE_EDIT: ["minimax", "groq", "kimi"],
+            TaskType.IDEA_VALIDATION: ["groq", "minimax", "kimi"],
+            TaskType.MARKET_RESEARCH: ["groq", "kimi", "minimax"],
+            TaskType.BUSINESS_PLANNING: ["groq", "minimax", "kimi"],
+            TaskType.PITCH_DECK: ["groq", "minimax", "kimi"],
+            TaskType.CHAT: ["groq", "kimi", "minimax"],
+            TaskType.GENERAL: ["groq", "minimax", "kimi"]
         }
         
         # Filter to only available models
-        recommended = recommendations.get(task_type, ["groq", "deepseek", "kimi"])
+        recommended = recommendations.get(task_type, ["groq", "minimax", "kimi"])
         return [m for m in recommended if m in self.available_models]
 
 

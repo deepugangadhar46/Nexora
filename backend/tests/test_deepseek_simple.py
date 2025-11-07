@@ -1,5 +1,5 @@
 """
-Simple synchronous test for DeepSeek configuration
+Simple synchronous test for MiniMax configuration
 """
 import os
 import requests
@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def test_deepseek_direct():
-    """Direct test of DeepSeek API via Hugging Face"""
+def test_minimax_direct():
+    """Direct test of MiniMax API via Hugging Face"""
     
     api_key = os.getenv("HF_TOKEN")
     
@@ -17,7 +17,7 @@ def test_deepseek_direct():
         return False
     
     print("=" * 80)
-    print("Testing DeepSeek V3.1 Model via Hugging Face")
+    print("Testing MiniMax M2 Model via Hugging Face")
     print("=" * 80)
     print(f"\n🔑 API Key found: {api_key[:20]}...")
     
@@ -27,9 +27,9 @@ def test_deepseek_direct():
     }
     
     payload = {
-        "model": "deepseek-ai/DeepSeek-V3-0324",
+        "model": "MiniMaxAI/MiniMax-M2",
         "messages": [
-            {"role": "user", "content": "Say 'Hello from DeepSeek V3!' and confirm you're working."}
+            {"role": "user", "content": "Say 'Hello from MiniMax M2!' and confirm you're working."}
         ],
         "max_tokens": 100,
         "temperature": 0.7
@@ -50,10 +50,10 @@ def test_deepseek_direct():
         if response.status_code == 200:
             data = response.json()
             message = data['choices'][0]['message']['content']
-            print("\n✅ SUCCESS! DeepSeek is working!\n")
+            print("\n✅ SUCCESS! MiniMax is working!\n")
             print(f"💬 Response: {message}\n")
             print("=" * 80)
-            print("✨ Configuration is PERFECT! DeepSeek V3.1 via Hugging Face is ready!")
+            print("✨ Configuration is PERFECT! MiniMax M2 via Hugging Face is ready!")
             print("=" * 80)
             return True
         else:
@@ -62,8 +62,8 @@ def test_deepseek_direct():
             print("=" * 80)
             print("⚠️  Issue detected. Check:")
             print("1. HF_TOKEN validity at: https://huggingface.co/settings/tokens")
-            print("2. Fireworks AI provider access")
-            print("3. DeepSeek model availability")
+            print("2. Hugging Face Inference API access")
+            print("3. MiniMax model availability")
             print("=" * 80)
             return False
             
@@ -73,5 +73,5 @@ def test_deepseek_direct():
         return False
 
 if __name__ == "__main__":
-    success = test_deepseek_direct()
+    success = test_minimax_direct()
     exit(0 if success else 1)

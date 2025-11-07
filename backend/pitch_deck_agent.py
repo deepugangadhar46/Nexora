@@ -3,7 +3,7 @@ PITCH DECK AGENT for Nexora AI IDE
 ===================================
 
 A professional AI agent that creates investor-ready pitch decks automatically using:
-- Groq API (Llama/DeepSeek) for content generation
+- Groq API (Llama) for content generation
 - ElevenLabs API for voiceover narration
 - QuickChart API for chart generation
 - Auto Slide Generator (Problem → Solution → Market → Team → Ask)
@@ -152,7 +152,7 @@ class PitchDeckResponse:
 # ============================================================================
 
 class GroqClient:
-    """Groq API client for Llama/DeepSeek models"""
+    """Groq API client for Llama models"""
     
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
@@ -802,7 +802,7 @@ Return as JSON."""
         num_questions: int = 10
     ) -> List[InvestorQuestion]:
         """
-        Let users practice answering questions via AI chat using DeepSeek reasoning
+        Let users practice answering questions via AI chat using AI reasoning
         """
         
         system_prompt = """You are a veteran venture capitalist conducting due diligence.
@@ -843,14 +843,14 @@ Include suggested answers and key points.
 Return as JSON."""
 
         try:
-            # Use DeepSeek model for reasoning
+            # Use Llama model for reasoning
             response = await self.groq.generate(
                 prompt=user_prompt,
                 system_prompt=system_prompt,
                 temperature=0.6,
                 json_mode=True,
                 max_tokens=3000,
-                model="deepseek-r1-distill-llama-70b"  # DeepSeek for reasoning
+                model="llama-3.3-70b-versatile"  # Llama for reasoning
             )
             
             data = json.loads(response)
