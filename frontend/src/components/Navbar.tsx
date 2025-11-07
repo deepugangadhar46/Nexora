@@ -241,6 +241,24 @@ const Navbar = () => {
 
             {isLoggedIn ? (
               <>
+                {/* Credits Badge */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("/pricing")}
+                  className={cn(
+                    "hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full font-medium transition-all",
+                    isScrolled 
+                      ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl" 
+                      : "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl"
+                  )}
+                  title="Click to upgrade"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-sm font-bold">{userInfo?.credits || 0}</span>
+                  <span className="text-xs opacity-90">credits</span>
+                </motion.button>
+
                 {/* Notifications */}
                 <NotificationCenter />
 

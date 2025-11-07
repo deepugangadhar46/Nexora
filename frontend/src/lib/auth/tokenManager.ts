@@ -62,7 +62,7 @@ class TokenManager {
     }
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       const response = await fetch(`${backendUrl}/api/auth/refresh`, {
         method: 'POST',
         headers: {
@@ -103,6 +103,7 @@ class TokenManager {
     localStorage.removeItem('userName');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userCredits');
+    localStorage.removeItem('userSubscription');
   }
 
   // Get valid token (refresh if needed)

@@ -33,20 +33,34 @@ const Login = () => {
         { maxRetries: 2, retryDelay: 1000 }
       );
 
-      if (response.token && response.user) {
-        localStorage.setItem("token", response.token);
+      console.log("Login response:", response);
+      
+      if (response.access_token && response.user) {
+        console.log("✅ Login successful, storing tokens and redirecting...");
+        localStorage.setItem("token", response.access_token);
+        localStorage.setItem("refresh_token", response.refresh_token);
         localStorage.setItem("userId", response.user.id);
         localStorage.setItem("userName", response.user.name);
         localStorage.setItem("userEmail", response.user.email);
         localStorage.setItem("userCredits", response.user.credits.toString());
         localStorage.setItem("userSubscription", response.user.subscription_tier);
         
+        // Calculate and store token expiry
+        const expiresIn = response.expires_in || 86400; // Default 24 hours
+        const expiresAt = Date.now() + (expiresIn - 300) * 1000; // 5 min buffer
+        localStorage.setItem("token_expires_at", expiresAt.toString());
+        
         // Track login
         analytics.trackLogin('email');
         
+        console.log("Navigating to dashboard...");
         navigate("/dashboard");
+      } else {
+        console.error("❌ Missing access_token or user in response:", response);
+        setError("Login response incomplete. Please try again.");
       }
     } catch (err: any) {
+      console.error("❌ Login error:", err);
       let errorMessage = "Login failed. Please check your credentials.";
       
       if (err instanceof APIError) {
@@ -63,6 +77,7 @@ const Login = () => {
         errorMessage = err.message || errorMessage;
       }
       
+      console.error("Error message:", errorMessage);
       setError(errorMessage);
     } finally {
       setIsLoading(false);

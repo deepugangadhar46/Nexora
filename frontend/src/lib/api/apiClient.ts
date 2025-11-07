@@ -11,7 +11,11 @@ class APIClient {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  }
+
+  getBaseURL(): string {
+    return this.baseURL;
   }
 
   private async request<T>(
@@ -135,6 +139,57 @@ class APIClient {
     }
 
     return await response.json();
+  }
+
+  // Auth Methods
+  async login(email: string, password: string) {
+    const response = await this.post<any>('/api/auth/login', { email, password }, { skipAuth: true });
+    
+    // Store tokens and user data
+    if (response.access_token && response.refresh_token) {
+      tokenManager.setTokens(response.access_token, response.refresh_token, response.expires_in || 86400);
+      
+      if (response.user) {
+        localStorage.setItem('userId', response.user.id);
+        localStorage.setItem('userName', response.user.name);
+        localStorage.setItem('userEmail', response.user.email);
+        localStorage.setItem('userCredits', response.user.credits?.toString() || '0');
+        localStorage.setItem('userSubscription', response.user.subscription_tier || 'free');
+      }
+    }
+    
+    return response;
+  }
+
+  async register(name: string, email: string, password: string) {
+    const response = await this.post<any>('/api/auth/register', { name, email, password }, { skipAuth: true });
+    
+    // Store tokens and user data
+    if (response.access_token && response.refresh_token) {
+      tokenManager.setTokens(response.access_token, response.refresh_token, response.expires_in || 86400);
+      
+      if (response.user) {
+        localStorage.setItem('userId', response.user.id);
+        localStorage.setItem('userName', response.user.name);
+        localStorage.setItem('userEmail', response.user.email);
+        localStorage.setItem('userCredits', response.user.credits?.toString() || '0');
+        localStorage.setItem('userSubscription', response.user.subscription_tier || 'free');
+      }
+    }
+    
+    return response;
+  }
+
+  async logout() {
+    tokenManager.clearTokens();
+  }
+
+  async getUserInfo(userId: string) {
+    return this.get<any>(`/api/user/${userId}`);
+  }
+
+  async updateUserCredits(userId: string, credits: number) {
+    return this.post<any>('/api/user/credits', { user_id: userId, credits });
   }
 }
 

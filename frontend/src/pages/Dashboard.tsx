@@ -18,6 +18,7 @@ import {
   Github
 } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
+import GuidedTour from "@/components/GuidedTour";
 import Navbar from "@/components/Navbar";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { useStore } from "@/store/useStore";
@@ -66,7 +67,8 @@ const Dashboard = () => {
       icon: Search,
       path: "/research",
       gradient: "from-cyan-500 to-blue-600",
-      stats: "Insights ready"
+      stats: "Insights ready",
+      tourId: "market-research"
     },
     {
       title: "Business Plan",
@@ -82,7 +84,8 @@ const Dashboard = () => {
       icon: Rocket,
       path: "/mvp-development", 
       gradient: "from-pink-500 to-rose-600",
-      stats: "Ready to start"
+      stats: "Ready to start",
+      tourId: "mvp-builder"
     },
     {
       title: "Pitch Deck",
@@ -90,7 +93,8 @@ const Dashboard = () => {
       icon: Presentation,
       path: "/pitch-deck",
       gradient: "from-orange-500 to-red-500",
-      stats: "Ready to present"
+      stats: "Ready to present",
+      tourId: "pitch-deck"
     },
     {
       title: "Marketing Strategy",
@@ -148,7 +152,7 @@ const Dashboard = () => {
                 whileHover={{ y: -5, scale: 1.02 }}
                 onClick={() => navigate(card.path)}
                 className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 cursor-pointer group overflow-hidden"
-                data-tour={card.path.substring(1)}
+                data-tour={(card as any).tourId || card.path.substring(1)}
               >
                 {/* Gradient Background */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-5 group-hover:opacity-10 transition-opacity`} />
@@ -271,7 +275,8 @@ const Dashboard = () => {
         
       </main>
       
-      {/* Onboarding Tour - Only show if not completed */}
+      {/* Guided Tour */}
+      <GuidedTour tourType="dashboard" />
     </div>
   );
 };

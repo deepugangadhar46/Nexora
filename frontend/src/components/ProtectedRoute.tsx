@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useStore } from "@/store/useStore";
+import { tokenManager } from "@/lib/auth/tokenManager";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,47 +9,70 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const { setHasCompletedOnboarding } = useStore();
+  const { setHasCompletedOnboarding, setUser } = useStore();
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
 
   useEffect(() => {
-    // Check if user is authenticated
-    const userId = localStorage.getItem("userId");
-    const authToken = localStorage.getItem("authToken");
-    
-    console.log("ProtectedRoute - checking auth:", { userId, authToken });
-    
-    // For development: if no auth data exists, create demo user
-    if (!userId || !authToken) {
-      console.log("ProtectedRoute - creating demo user");
-      // Set demo user data for development
-      localStorage.setItem("userId", "demo-user-123");
-      localStorage.setItem("userName", "Demo User");
-      localStorage.setItem("userEmail", "demo@nexora.com");
-      localStorage.setItem("userCredits", "20");
-      localStorage.setItem("userSubscription", "free");
-      localStorage.setItem("authToken", "demo-token-123");
+    const checkAuth = async () => {
+      // Check if user has valid token
+      const token = await tokenManager.getValidToken();
       
-      // Skip onboarding for demo user
-      setHasCompletedOnboarding(true);
-      
-      console.log("ProtectedRoute - demo user created, setting authenticated");
-      // Small delay to ensure localStorage is set before rendering
-      setTimeout(() => {
+      if (token) {
+        // User is authenticated
         setIsAuthenticated(true);
-      }, 100);
-    } else {
-      console.log("ProtectedRoute - existing user found");
-      setIsAuthenticated(!!(userId && authToken));
-    }
-  }, [setHasCompletedOnboarding]);
+        
+        // Load user data from localStorage into store
+        const userId = localStorage.getItem("userId");
+        const userName = localStorage.getItem("userName");
+        const userEmail = localStorage.getItem("userEmail");
+        const userCredits = localStorage.getItem("userCredits");
+        const userSubscription = localStorage.getItem("userSubscription");
+        
+        if (userId && userEmail) {
+          setUser({
+            id: userId,
+            name: userName || "",
+            email: userEmail,
+            credits: parseInt(userCredits || "0"),
+            subscription_tier: userSubscription || "free"
+          });
+        }
+      } else if (isDemoMode) {
+        // Demo mode: create demo user
+        console.log("Demo mode enabled - creating demo user");
+        localStorage.setItem("userId", "demo-user-123");
+        localStorage.setItem("userName", "Demo User");
+        localStorage.setItem("userEmail", "demo@nexora.com");
+        localStorage.setItem("userCredits", "100");
+        localStorage.setItem("userSubscription", "pro");
+        tokenManager.setTokens("demo-token-123", "demo-refresh-123", 86400);
+        
+        setUser({
+          id: "demo-user-123",
+          name: "Demo User",
+          email: "demo@nexora.com",
+          credits: 100,
+          subscription_tier: "pro"
+        });
+        
+        setHasCompletedOnboarding(true);
+        setIsAuthenticated(true);
+      } else {
+        // No valid token and not demo mode
+        setIsAuthenticated(false);
+      }
+    };
+    
+    checkAuth();
+  }, [setHasCompletedOnboarding, setUser, isDemoMode]);
 
   // Show loading state while checking authentication
   if (isAuthenticated === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-pulse-600"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     );

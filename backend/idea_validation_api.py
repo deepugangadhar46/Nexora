@@ -166,9 +166,18 @@ async def validate_idea(request: IdeaValidationRequest):
         # Convert to response model
         response = _convert_to_response(result)
         
+        # Add model metadata
+        response_dict = response.model_dump() if hasattr(response, 'model_dump') else response.dict()
+        response_dict["metadata"] = {
+            "model": "Groq-Llama",
+            "provider": "Groq",
+            "reason": "Optimized for analysis and reasoning",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
         logger.info(f"Validation completed: {result.validation_id}")
         
-        return response
+        return response_dict
     
     except Exception as e:
         logger.error(f"Error validating idea: {str(e)}")

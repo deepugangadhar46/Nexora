@@ -11,8 +11,12 @@ from dotenv import load_dotenv
 from contextlib import contextmanager
 import mysql.connector
 from mysql.connector import pooling, Error
+from pathlib import Path
 
-load_dotenv()
+# Load environment variables from root directory
+root_dir = Path(__file__).parent.parent
+env_path = root_dir / '.env'
+load_dotenv(dotenv_path=env_path)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -24,16 +28,18 @@ DB_CONFIG = {
     'user': os.getenv('DB_USER'),
     'password': os.getenv('DB_PASSWORD'),
     'database': os.getenv('DB_NAME'),
-    'ssl_disabled': True,  # Disable SSL for local development
-    'ssl_verify_cert': False,
-    'ssl_verify_identity': False,
+    'ssl_ca': os.getenv('CA_CERT'),  # SSL certificate for Aiven Cloud
+    'ssl_verify_cert': True,
+    'ssl_verify_identity': True,
 }
 
 # Connection pool configuration
 POOL_CONFIG = {
     'pool_name': 'nexora_pool',
-    'pool_size': 20,  # Increased from 5 for better performance
+    'pool_size': int(os.getenv('DB_POOL_SIZE', 20)),  # Configurable pool size
     'pool_reset_session': True,
+    'autocommit': False,  # Explicit transaction control
+    'get_warnings': True,  # Log MySQL warnings
 }
 
 # Global connection pool
@@ -100,10 +106,18 @@ def get_db_connection():
 
 
 def execute_query(query: str, params: tuple = None, fetch_one: bool = False, fetch_all: bool = True):
-    """Execute a database query"""
+    """Execute a database query with SQL injection prevention"""
+    if not connection_pool:
+        logger.warning("Database not available - query skipped")
+        return None if (fetch_one or fetch_all) else 0
+    
     with get_db_connection() as conn:
         cursor = conn.cursor(dictionary=True)
         try:
+            # Always use parameterized queries - params should be tuple or dict
+            if params and not isinstance(params, (tuple, dict)):
+                raise ValueError("Query parameters must be tuple or dict")
+            
             cursor.execute(query, params or ())
             
             if fetch_one:
@@ -114,6 +128,9 @@ def execute_query(query: str, params: tuple = None, fetch_one: bool = False, fet
                 result = cursor.rowcount
             
             return result
+        except Error as e:
+            logger.error(f"Database query error: {e}")
+            raise
         finally:
             cursor.close()
 
@@ -332,10 +349,15 @@ def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
 
 
 def update_user_credits(user_id: str, credits: int) -> bool:
-    """Update user credits"""
-    query = "UPDATE users SET credits = %s WHERE id = %s"
+    """Update user credits with validation"""
+    if not isinstance(credits, int) or credits < 0:
+        logger.error(f"Invalid credits value: {credits}")
+        return False
+    
+    query = "UPDATE users SET credits = %s, updated_at = NOW() WHERE id = %s"
     try:
         execute_query(query, (credits, user_id), fetch_all=False)
+        logger.info(f"Updated credits for user {user_id}: {credits}")
         return True
     except Error as e:
         logger.error(f"Error updating credits: {e}")

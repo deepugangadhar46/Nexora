@@ -84,6 +84,30 @@ class PlausibleAnalytics {
       error_message: errorMessage.substring(0, 100) // Limit length
     });
   }
+
+  // Hackathon Demo Events
+  trackGenerateMVP(productName: string, techStack: string[]) {
+    this.trackEvent('Generate MVP', {
+      product_name: productName.substring(0, 50),
+      tech_stack: techStack.join(',').substring(0, 100)
+    });
+  }
+
+  trackViewPreview(previewType: 'sandbox' | 'mock') {
+    this.trackEvent('View Preview', { preview_type: previewType });
+  }
+
+  trackGenerateDeck(slideCount: number) {
+    this.trackEvent('Generate Deck', { slide_count: slideCount });
+  }
+
+  trackMarketResearch(competitorCount: number) {
+    this.trackEvent('Market Research', { competitor_count: competitorCount });
+  }
+
+  trackExportProject(format: 'zip' | 'github') {
+    this.trackEvent('Export Project', { format });
+  }
 }
 
 // Export singleton instance

@@ -30,7 +30,8 @@ from auth import (
     get_google_oauth_url,
     get_github_oauth_url,
     exchange_google_code,
-    exchange_github_code
+    exchange_github_code,
+    JWT_EXPIRATION_HOURS
 )
 from payment import payment_manager, PaymentProvider
 from subscription import SubscriptionManager, SubscriptionTier, get_credit_cost
@@ -50,6 +51,7 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import secrets
 
 # Import MVP Builder Agent
 from mvp_builder_agent import (
@@ -92,8 +94,20 @@ from api_v1 import router as api_v1_router, set_agents
 # Import Database
 import database as db
 
-# Load environment variables
-load_dotenv()
+# Import Middleware (if exists)
+try:
+    from middleware import setup_middleware
+    MIDDLEWARE_AVAILABLE = True
+except ImportError:
+    MIDDLEWARE_AVAILABLE = False
+    logger.warning("Middleware module not found - some security features disabled")
+
+# Load environment variables from root directory
+import os
+from pathlib import Path
+root_dir = Path(__file__).parent.parent
+env_path = root_dir / '.env'
+load_dotenv(dotenv_path=env_path)
 
 # Configure logging FIRST
 logging.basicConfig(
@@ -216,6 +230,11 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Setup middleware if available
+if MIDDLEWARE_AVAILABLE:
+    setup_middleware(app)
+    logger.info("✓ Security middleware enabled")
+
 # Configure CORS with security best practices
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
@@ -276,15 +295,41 @@ class ExecuteCodeRequest(BaseModel):
 
 class UserRegistrationRequest(BaseModel):
     """User registration request"""
-    email: str = Field(..., description="User email")
-    password: str = Field(..., description="User password", min_length=6)
-    name: str = Field(..., description="User name")
+    email: str = Field(..., description="User email", max_length=254)
+    password: str = Field(..., description="User password", min_length=8, max_length=128)
+    name: str = Field(..., description="User name", min_length=1, max_length=100)
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        import re
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', v):
+            raise ValueError('Invalid email format')
+        return v.lower().strip()
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(c.islower() for c in v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least one number')
+        return v
 
 
 class UserLoginRequest(BaseModel):
     """User login request"""
-    email: str = Field(..., description="User email")
-    password: str = Field(..., description="User password", min_length=6)
+    email: str = Field(..., description="User email", max_length=254)
+    password: str = Field(..., description="User password", min_length=6, max_length=128)
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        return v.lower().strip()
 
 
 class RefreshTokenRequest(BaseModel):
@@ -475,8 +520,9 @@ async def register_user(request: Request, user_request: UserRegistrationRequest)
                     "name": user_request.name,
                     "credits": 20
                 },
-                "token": access_token,
-                "refresh_token": refresh_token
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "expires_in": JWT_EXPIRATION_HOURS * 3600
             }
         else:
             raise HTTPException(status_code=500, detail="Failed to create user")
@@ -560,8 +606,9 @@ async def login_user(request: Request, user_request: UserLoginRequest):
             "status": "success",
             "message": "Login successful",
             "user": user_data,
-            "token": access_token,
-            "refresh_token": refresh_token
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "expires_in": JWT_EXPIRATION_HOURS * 3600
         }
     
     except HTTPException:
@@ -574,10 +621,16 @@ async def login_user(request: Request, user_request: UserLoginRequest):
 @app.post("/api/auth/reset-password")
 @limiter.limit("3/hour")
 async def reset_password(request: Request, email: str, new_password: str, admin_key: str = ""):
-    """Reset user password (for testing/admin purposes)"""
+    """Reset user password (for testing/admin purposes - DISABLE IN PRODUCTION)"""
     try:
-        # Simple admin key check (in production, use proper authentication)
-        if admin_key != os.getenv("ADMIN_KEY", "nexora-admin-2024"):
+        # SECURITY WARNING: This endpoint should be disabled in production
+        if os.getenv("ENVIRONMENT") == "production":
+            raise HTTPException(status_code=404, detail="Endpoint not available")
+        
+        # Simple admin key check
+        expected_key = os.getenv("ADMIN_KEY")
+        if not expected_key or admin_key != expected_key:
+            logger.warning(f"Unauthorized password reset attempt for {email}")
             raise HTTPException(status_code=403, detail="Unauthorized")
         
         # Get user
@@ -615,13 +668,15 @@ async def refresh_token_endpoint(request: Request, token_request: RefreshTokenRe
     try:
         from auth import refresh_access_token
         
-        new_access_token = refresh_access_token(token_request.refresh_token)
-        if not new_access_token:
+        token_data = refresh_access_token(token_request.refresh_token)
+        if not token_data:
             raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
         
         return {
             "status": "success",
-            "token": new_access_token
+            "access_token": token_data["access_token"],
+            "refresh_token": token_data["refresh_token"],
+            "expires_in": token_data["expires_in"]
         }
     
     except HTTPException:
@@ -692,8 +747,9 @@ async def google_oauth_callback(code: str, state: Optional[str] = None):
                 "credits": user.get('credits', 0),
                 "subscription_tier": user.get('subscription_tier', 'free')
             },
-            "token": access_token,
-            "refresh_token": refresh_token
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "expires_in": JWT_EXPIRATION_HOURS * 3600
         }
     
     except HTTPException:
@@ -760,8 +816,9 @@ async def github_oauth_callback(code: str, state: Optional[str] = None):
                 "credits": user.get('credits', 0),
                 "subscription_tier": user.get('subscription_tier', 'free')
             },
-            "token": access_token,
-            "refresh_token": refresh_token
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "expires_in": JWT_EXPIRATION_HOURS * 3600
         }
     
     except HTTPException:
@@ -1175,7 +1232,7 @@ Be conversational but professional. Keep responses under 4 sentences."""
 class MVPStreamRequest(BaseModel):
     """MVP streaming request model"""
     prompt: Annotated[str, StringConstraints(min_length=10, max_length=5000)] = Field(..., description="User prompt for MVP generation")
-    conversationHistory: List[Dict[str, str]] = Field(default=[], max_items=50, description="Conversation history")
+    conversationHistory: List[Dict[str, str]] = Field(default=[], max_length=50, description="Conversation history")
     
     @field_validator('prompt')
     @classmethod
@@ -2619,6 +2676,12 @@ ALWAYS USE:
             "files": files_array,
             "filesDict": files_dict,  # Keep dict format for backward compatibility
             "fileCount": len(files_array),
+            "metadata": {
+                "model": "DeepSeek-V3",
+                "provider": "Hugging Face",
+                "reason": "Optimized for code generation",
+                "timestamp": datetime.utcnow().isoformat()
+            },
             "timestamp": datetime.now().isoformat()
         }
     

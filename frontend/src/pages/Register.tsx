@@ -49,13 +49,19 @@ const Register = () => {
         { maxRetries: 2, retryDelay: 1000 }
       );
 
-      if (response.token && response.user) {
-        localStorage.setItem("token", response.token);
+      if (response.access_token && response.user) {
+        localStorage.setItem("token", response.access_token);
+        localStorage.setItem("refresh_token", response.refresh_token);
         localStorage.setItem("userId", response.user.id);
         localStorage.setItem("userName", response.user.name);
         localStorage.setItem("userEmail", response.user.email);
         localStorage.setItem("userCredits", response.user.credits.toString());
         localStorage.setItem("userSubscription", response.user.subscription_tier);
+        
+        // Calculate and store token expiry
+        const expiresIn = response.expires_in || 86400; // Default 24 hours
+        const expiresAt = Date.now() + (expiresIn - 300) * 1000; // 5 min buffer
+        localStorage.setItem("token_expires_at", expiresAt.toString());
         
         navigate("/dashboard");
       }

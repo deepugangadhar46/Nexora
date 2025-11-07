@@ -16,8 +16,13 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 import logging
+from pathlib import Path
 
-load_dotenv()
+# Load environment variables from root directory
+root_dir = Path(__file__).parent.parent
+env_path = root_dir / '.env'
+load_dotenv(dotenv_path=env_path)
+
 logger = logging.getLogger(__name__)
 
 # JWT Configuration
@@ -33,11 +38,11 @@ if not os.getenv("JWT_SECRET"):
 # OAuth Configuration
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:3000/auth/google/callback")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8080/auth/google/callback")
 
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
-GITHUB_REDIRECT_URI = os.getenv("GITHUB_REDIRECT_URI", "http://localhost:3000/auth/github/callback")
+GITHUB_REDIRECT_URI = os.getenv("GITHUB_REDIRECT_URI", "http://localhost:8080/auth/github/callback")
 
 
 def hash_password(password: str) -> str:
@@ -229,7 +234,7 @@ def is_token_expired(token: str) -> bool:
     return True
 
 
-def refresh_access_token(refresh_token: str) -> Optional[str]:
+def refresh_access_token(refresh_token: str) -> Optional[Dict[str, Any]]:
     """
     Generate a new access token from a refresh token
     
@@ -237,7 +242,7 @@ def refresh_access_token(refresh_token: str) -> Optional[str]:
         refresh_token: Valid refresh token
         
     Returns:
-        str: New access token or None if refresh token is invalid
+        Dict with access_token, refresh_token, and expires_in, or None if invalid
     """
     payload = verify_token(refresh_token)
     
@@ -254,9 +259,25 @@ def refresh_access_token(refresh_token: str) -> Optional[str]:
     if not user_id:
         return None
     
-    # Note: We don't have email in refresh token, so we'll need to fetch it
-    # For now, we'll create a token without email (can be added later)
-    return create_access_token(user_id, "")
+    # Fetch user email from database
+    try:
+        from database import Database
+        db = Database()
+        user = db.get_user_by_id(user_id)
+        email = user.get("email", "") if user else ""
+    except Exception as e:
+        logger.error(f"Error fetching user for refresh: {e}")
+        email = ""
+    
+    # Create new tokens
+    new_access_token = create_access_token(user_id, email)
+    new_refresh_token = create_refresh_token(user_id)
+    
+    return {
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "expires_in": JWT_EXPIRATION_HOURS * 3600  # Convert hours to seconds
+    }
 
 
 # OAuth Helper Functions

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { tokenManager } from '@/lib/auth/tokenManager';
 
 interface User {
   id: string;
@@ -54,12 +55,8 @@ export const useStore = create<AppState>()(
       isAuthenticated: false,
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       logout: () => {
-        localStorage.removeItem('userId');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('userCredits');
-        localStorage.removeItem('userSubscription');
-        localStorage.removeItem('authToken');
+        // Use tokenManager to clear all auth-related data
+        tokenManager.clearTokens();
         set({ user: null, isAuthenticated: false });
       },
       
