@@ -394,11 +394,34 @@ Return scores (0-100) and reasoning in JSON format."""
             
             # Parse JSON response
             data = json.loads(response)
+            logger.info(f"Groq feasibility response: {data}")
             
-            # Calculate weighted overall score with enhanced formula
-            feasibility = max(0, min(100, int(data.get("feasibility", 50))))
-            novelty = max(0, min(100, int(data.get("novelty", 50))))
-            scalability = max(0, min(100, int(data.get("scalability", 50))))
+            # Extract scores with robust error handling
+            # Try to get the value, convert to int, and ensure it's in valid range
+            try:
+                feasibility = int(data.get("feasibility", 50))
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid feasibility value: {data.get('feasibility')}, using default")
+                feasibility = 50
+            
+            try:
+                novelty = int(data.get("novelty", 50))
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid novelty value: {data.get('novelty')}, using default")
+                novelty = 50
+            
+            try:
+                scalability = int(data.get("scalability", 50))
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid scalability value: {data.get('scalability')}, using default")
+                scalability = 50
+            
+            # Clamp values to valid range
+            feasibility = max(0, min(100, feasibility))
+            novelty = max(0, min(100, novelty))
+            scalability = max(0, min(100, scalability))
+            
+            logger.info(f"Parsed scores - Feasibility: {feasibility}, Novelty: {novelty}, Scalability: {scalability}")
             
             # Weighted average: feasibility 40%, scalability 35%, novelty 25%
             # This prioritizes execution ability and market size over pure innovation
@@ -414,6 +437,7 @@ Return scores (0-100) and reasoning in JSON format."""
         
         except Exception as e:
             logger.error(f"Error analyzing feasibility: {str(e)}")
+            logger.error(f"Raw response: {response if 'response' in locals() else 'No response'}")
             # Return default scores on error
             return FeasibilityScore(
                 feasibility=50,

@@ -168,7 +168,8 @@ async def lifespan(app: FastAPI):
     subscription_manager = SubscriptionManager(db)
     logger.info("Subscription manager initialized")
     
-    global mvp_builder_agent
+    global mvp_builder_agent, idea_validation_agent, business_planning_agent, market_research_agent, pitch_deck_agent
+    
     try:
         mvp_builder_agent = MVPBuilderAgent()
         logger.info("✓ MVP Builder Agent initialized successfully")
@@ -2131,6 +2132,197 @@ async def business_plan_health():
         "agent": "initialized" if business_planning_agent else "not initialized",
         "timestamp": datetime.now().isoformat()
     }
+
+
+# ============================================================================
+# COMPREHENSIVE MARKETING STRATEGY ENDPOINT (Combines Market Research + Marketing)
+# ============================================================================
+
+class ComprehensiveMarketingRequest(BaseModel):
+    """Comprehensive marketing strategy request model"""
+    industry: str = Field(default="", description="Industry or sector")
+    targetMarket: str = Field(default="", description="Target market segment")
+    idea: str = Field(default="", description="Business idea")
+    region: str = Field(default="Global", description="Geographic scope")
+    competitors: list[str] = Field(default_factory=list, description="Known competitors")
+    budget: float = Field(default=10000, description="Marketing budget")
+
+@app.get("/api/marketing-strategy/health")
+async def marketing_strategy_health():
+    """Health check for Marketing Strategy endpoint"""
+    return {
+        "status": "ok",
+        "market_research_agent": "initialized" if market_research_agent else "not initialized",
+        "business_planning_agent": "initialized" if business_planning_agent else "not initialized",
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.post("/api/marketing-strategy/comprehensive")
+async def generate_comprehensive_marketing_strategy(
+    request: ComprehensiveMarketingRequest,
+    token: Optional[str] = Depends(verify_token)
+):
+    """Generate comprehensive marketing strategy combining market research and marketing plans"""
+    try:
+        # Detailed agent check with logging
+        if not market_research_agent:
+            logger.error("Market Research Agent is not initialized")
+            raise HTTPException(status_code=503, detail="Market Research Agent not initialized. Please check GROQ_API_KEY in backend .env file")
+        
+        if not business_planning_agent:
+            logger.error("Business Planning Agent is not initialized")
+            raise HTTPException(status_code=503, detail="Business Planning Agent not initialized. Please check GROQ_API_KEY in backend .env file")
+        
+        logger.info("Starting comprehensive marketing strategy generation...")
+        
+        data = request.dict()
+        industry = data.get("industry", "")
+        target_market = data.get("targetMarket", "")
+        idea = data.get("idea", "")
+        region = data.get("region", "Global")
+        budget = data.get("budget", 10000)
+        
+        # Phase 1: Market Research
+        logger.info("Phase 1: Conducting market research...")
+        
+        # Discover competitors
+        competitors = await market_research_agent.discover_competitors(
+            industry=industry,
+            target_segment=target_market,
+            limit=10
+        )
+        
+        # Estimate market size
+        market_size = await market_research_agent.estimate_market_size(
+            industry=industry,
+            target_segment=target_market,
+            geographic_scope=region
+        )
+        
+        # Analyze trends
+        trends = await market_research_agent.analyze_trends(
+            industry=industry,
+            target_segment=target_market,
+            limit=10
+        )
+        
+        # Generate SWOT if product description provided
+        swot = None
+        if idea:
+            swot = await market_research_agent.generate_swot(
+                industry=industry,
+                target_segment=target_market,
+                your_product_description=idea
+            )
+        
+        # Identify market gaps
+        market_gaps = await market_research_agent.identify_market_gaps(
+            industry=industry,
+            target_segment=target_market,
+            competitors=competitors
+        )
+        
+        # Generate executive summary and insights
+        logger.info("Generating market research summary...")
+        summary_prompt = f"""
+        Based on this market research for {industry} targeting {target_market}:
+        - Market Size: TAM ${market_size.tam:,.0f}, SAM ${market_size.sam:,.0f}, SOM ${market_size.som:,.0f}
+        - {len(competitors)} competitors identified
+        - {len(trends)} market trends analyzed
+        - {len(market_gaps)} market gaps found
+        
+        Provide:
+        1. A concise executive summary (2-3 sentences)
+        2. Top 5 key insights
+        3. Top 5 strategic recommendations
+        
+        Return as JSON with keys: executive_summary, key_insights (array), recommendations (array)
+        """
+        
+        summary_response = await market_research_agent.groq.generate(
+            prompt=summary_prompt,
+            system_prompt="You are a market research expert. Provide concise, actionable insights. Return valid JSON only.",
+            temperature=0.3,
+            json_mode=True,
+            max_tokens=1500
+        )
+        
+        import json
+        summary_data = json.loads(summary_response)
+        
+        # Phase 2: Marketing Strategy
+        logger.info("Phase 2: Building marketing strategy...")
+        marketing_strategy = await business_planning_agent.build_marketing_strategy(
+            idea=idea,
+            target_audience=target_market,
+            budget=budget
+        )
+        
+        # Combine results
+        from dataclasses import asdict
+        result = {
+            "market_research": {
+                "market_data": {
+                    "TAM": {
+                        "value": market_size.tam,
+                        "currency": market_size.currency,
+                        "description": market_size.tam_description,
+                        "growth_rate": 15.0  # Default growth rate estimate
+                    },
+                    "SAM": {
+                        "value": market_size.sam,
+                        "currency": market_size.currency,
+                        "description": market_size.sam_description,
+                        "percentage_of_TAM": (market_size.sam / market_size.tam * 100) if market_size.tam > 0 else 0
+                    },
+                    "SOM": {
+                        "value": market_size.som,
+                        "currency": market_size.currency,
+                        "description": market_size.som_description,
+                        "percentage_of_SAM": (market_size.som / market_size.sam * 100) if market_size.sam > 0 else 0
+                    },
+                    "market_trends": [
+                        {
+                            "trend": t.keyword,
+                            "impact": "High" if t.trend_score > 70 else "Medium" if t.trend_score > 40 else "Low",
+                            "description": t.relevance or f"{t.category} trend with score {t.trend_score}"
+                        } for t in trends[:5]
+                    ],
+                    "growth_forecast": {
+                        "next_year": 15.0,
+                        "three_years": 45.0,
+                        "five_years": 75.0
+                    }
+                },
+                "competitors": [
+                    {
+                        "name": c.name,
+                        "market_share": 100 / len(competitors) if competitors else 0,  # Simplified
+                        "strengths": c.strengths[:3],
+                        "weaknesses": c.weaknesses[:3],
+                        "key_products": [],
+                        "pricing_strategy": c.pricing_model or "Not specified"
+                    } for c in competitors[:6]
+                ],
+                "executive_summary": summary_data.get("executive_summary", ""),
+                "key_insights": summary_data.get("key_insights", []),
+                "recommendations": summary_data.get("recommendations", [])
+            },
+            "marketing_strategy": asdict(marketing_strategy)
+        }
+        
+        logger.info("Comprehensive marketing strategy generated successfully")
+        
+        return {
+            "status": "success",
+            "data": result,
+            "creditsUsed": 5,
+            "remainingCredits": None  # Frontend will calculate
+        }
+    
+    except Exception as e:
+        logger.error(f"Error generating comprehensive marketing strategy: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================

@@ -52,17 +52,25 @@ const IdeaValidation = () => {
 
       setValidationResult(result);
       
-      // Validation scores received successfully
-      // Scores: overall, feasibility, novelty, scalability.overall,
-      setValidationResult(result);
+      // Log scores for debugging
+      console.log('Validation scores received:', {
+        feasibility: result.ai_feasibility_score.feasibility,
+        novelty: result.ai_feasibility_score.novelty,
+        scalability: result.ai_feasibility_score.scalability,
+        overall: result.ai_feasibility_score.overall
+      });
       
       // Generate chart URLs with actual API scores (no defaults)
-      const barChart = generateValidationBarChart({
+      const chartScores = {
         feasibility: result.ai_feasibility_score.feasibility,
         scalability: result.ai_feasibility_score.scalability,
         marketDemand: result.problem_solution_fit?.trend_score ?? result.ai_feasibility_score.overall,
         innovation: result.ai_feasibility_score.novelty
-      });
+      };
+      
+      console.log('Chart scores being passed:', chartScores);
+      
+      const barChart = generateValidationBarChart(chartScores);
       const radarChart = generateRadarChart({
         marketPotential: result.target_audience?.fit_score ?? result.ai_feasibility_score.overall,
         feasibility: result.ai_feasibility_score.feasibility,
@@ -70,6 +78,10 @@ const IdeaValidation = () => {
         scalability: result.ai_feasibility_score.scalability,
         marketDemand: result.problem_solution_fit?.trend_score ?? result.ai_feasibility_score.overall
       });
+      
+      console.log('Bar chart URL generated:', barChart);
+      console.log('Radar chart URL generated:', radarChart);
+      
       setBarChartUrl(barChart);
       setRadarChartUrl(radarChart);
     } catch (err: any) {

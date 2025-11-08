@@ -42,7 +42,7 @@ const Footer = () => {
   const footerLinks = {
     product: [
       { name: "Idea Validation", href: "/idea-validation" },
-      { name: "Market Research", href: "/research" },
+      { name: "Marketing Strategy", href: "/marketing-strategy" },
       { name: "Business Plan", href: "/business-plan" },
       { name: "MVP Development", href: "/mvp-development" },
       { name: "Team Collaboration", href: "/team-collaboration" },

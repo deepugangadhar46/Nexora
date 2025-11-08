@@ -41,16 +41,19 @@ const FeatureCard = ({ icon, title, description, index }: FeatureCardProps) => {
       ref={cardRef}
       className={cn(
         "feature-card glass-card p-3 sm:p-4 interactive-card hover-lift-lg",
+        "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm",
+        "border border-gray-200 dark:border-gray-700",
         "lg:hover:bg-gradient-to-br lg:hover:from-white lg:hover:to-pulse-50",
+        "dark:lg:hover:from-gray-800 dark:lg:hover:to-gray-700",
         "transition-all duration-300"
       )}
       style={{ animationDelay: `${0.1 * index}s` }}
     >
-      <div className="rounded-full bg-pulse-50 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-pulse-500 mb-3 sm:mb-4">
+      <div className="rounded-full bg-pulse-50 dark:bg-pulse-900/30 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-pulse-500 dark:text-pulse-400 mb-3 sm:mb-4">
         {icon}
       </div>
-      <h3 className="text-base sm:text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-gray-600 text-xs sm:text-sm">{description}</p>
+      <h3 className="text-base sm:text-lg font-semibold mb-2 text-gray-900 dark:text-white">{title}</h3>
+      <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{description}</p>
     </div>
   );
 };
@@ -89,7 +92,7 @@ const Features = () => {
   
   return (
     <section 
-      className="py-10 sm:py-12 md:py-16 pb-0 relative bg-gray-50" 
+      className="py-10 sm:py-12 md:py-16 pb-0 relative bg-gray-50 dark:bg-gray-900" 
       id="features" 
       ref={sectionRef}
       style={{
@@ -98,16 +101,19 @@ const Features = () => {
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed'
       }}
+      data-dark-style={{
+        backgroundImage: 'linear-gradient(rgba(17, 24, 39, 0.9), rgba(17, 24, 39, 0.9)), url("/background-section1.png")'
+      }}
     >
       <div className="section-container">
         <div className="text-center mb-8 sm:mb-12">
           <div className="pulse-chip mx-auto mb-3 sm:mb-4 fade-in-element">
             <span>Features</span>
           </div>
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-display font-bold mb-3 sm:mb-4 fade-in-element">
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-display font-bold mb-3 sm:mb-4 fade-in-element text-gray-900 dark:text-white">
             Complete Startup Generation, <br className="hidden sm:block" />Powered by AI
           </h2>
-          <p className="text-base md:text-lg text-gray-600 max-w-3xl mx-auto fade-in-element">
+          <p className="text-base md:text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto fade-in-element">
             Everything you need to launch your startup - from research to MVP to marketing - all automated.
           </p>
         </div>

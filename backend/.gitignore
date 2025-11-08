@@ -33,7 +33,14 @@ ENV/
 *.swo
 *~
 
-# Environment
+# Environment variables - CRITICAL: Never commit these!
+.env
+.env.local
+.env.production
+.env.development
+!.env.example
+*.pem
+ca*.pem
 
 
 # Logs

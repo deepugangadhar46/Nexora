@@ -235,7 +235,15 @@ class GroqClient:
         self.model = "llama-3.3-70b-versatile"  # Using Llama 3.3 70B
         
         if not self.api_key:
-            raise ValueError("GROQ_API_KEY not found in environment variables")
+            error_msg = (
+                "GROQ_API_KEY not found in environment variables. "
+                "Please add GROQ_API_KEY=your_key to backend/.env file. "
+                "Get your key from https://console.groq.com/"
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        logger.info(f"GroqClient initialized with model: {self.model}")
     
     async def generate(
         self,

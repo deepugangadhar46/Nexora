@@ -102,7 +102,11 @@
   }
 
   body {
-    @apply bg-white text-black font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased transition-colors duration-300;
+  }
+
+  .dark body {
+    @apply bg-gray-900 text-gray-100;
   }
 
   /* Smooth scrolling */
@@ -116,16 +120,16 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    @apply bg-gray-100 dark:bg-gray-800;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #888;
+    @apply bg-gray-400 dark:bg-gray-600;
     border-radius: 10px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    @apply bg-gray-500 dark:bg-gray-500;
   }
 }
 

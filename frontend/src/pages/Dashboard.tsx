@@ -62,13 +62,13 @@ const Dashboard = () => {
       stats: "3 ideas validated"
     },
     {
-      title: "Market Research",
-      description: "Deep market analysis and competitive intelligence",
-      icon: Search,
-      path: "/research",
-      gradient: "from-cyan-500 to-blue-600",
-      stats: "Insights ready",
-      tourId: "market-research"
+      title: "Marketing Strategy",
+      description: "Deep market research, competitive intelligence, and comprehensive marketing plans",
+      icon: TrendingUp,
+      path: "/marketing-strategy",
+      gradient: "from-green-500 to-teal-600",
+      stats: "All-in-one solution",
+      tourId: "marketing-strategy"
     },
     {
       title: "Business Plan",
@@ -97,14 +97,6 @@ const Dashboard = () => {
       tourId: "pitch-deck"
     },
     {
-      title: "Marketing Strategy",
-      description: "Create comprehensive marketing plans and growth strategies",
-      icon: TrendingUp,
-      path: "/marketing",
-      gradient: "from-green-500 to-teal-600",
-      stats: "Ready to launch"
-    },
-    {
       title: "Team Collaboration",
       description: "Manage team tasks, projects, and communication",
       icon: Users,
@@ -115,7 +107,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navbar />
       <Breadcrumbs />
       
@@ -151,11 +143,11 @@ const Dashboard = () => {
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -5, scale: 1.02 }}
                 onClick={() => navigate(card.path)}
-                className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 cursor-pointer group overflow-hidden"
+                className="relative bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl border border-gray-200 dark:border-gray-700 p-6 cursor-pointer group overflow-hidden transition-all"
                 data-tour={(card as any).tourId || card.path.substring(1)}
               >
-                {/* Gradient Background */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-5 group-hover:opacity-10 transition-opacity`} />
+                {/* Subtle gradient accent on hover only */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-5 transition-opacity`} />
                 
                 <div className="relative z-10">
                   {/* Icon */}
@@ -241,12 +233,11 @@ const Dashboard = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="bg-gradient-to-r from-pulse-500 via-pulse-600 to-orange-600 rounded-2xl p-8 text-white shadow-2xl relative overflow-hidden"
+          className="bg-gradient-to-r from-pulse-500 to-orange-600 rounded-xl p-8 text-white shadow-lg relative overflow-hidden"
         >
-          {/* Animated background elements */}
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl animate-pulse" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full blur-2xl animate-pulse delay-1000" />
+          {/* Subtle background pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl" />
           </div>
           
           <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">

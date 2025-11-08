@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
+import { ThemeProvider } from "next-themes";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import AIWidget from "@/components/AIWidget";
 import StickyCtaBar from "@/components/StickyCtaBar";
@@ -18,10 +19,9 @@ const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MVPBuilder = lazy(() => import("./pages/MVPBuilder"));
-const Research = lazy(() => import("./pages/Research"));
 const BusinessPlan = lazy(() => import("./pages/BusinessPlan"));
 const IdeaValidation = lazy(() => import("./pages/IdeaValidation"));
-const Marketing = lazy(() => import("./pages/Marketing"));
+const MarketingStrategy = lazy(() => import("./pages/MarketingStrategy"));
 const TeamCollaboration = lazy(() => import("./pages/TeamCollaboration"));
 const PitchDeck = lazy(() => import("./pages/PitchDeck"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -122,9 +122,10 @@ const App = () => {
   return (
     <ErrorBoundary>
       <HelmetProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <NotificationProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <NotificationProvider>
               <Toaster />
               <Sonner />
               <BrowserRouter>
@@ -174,14 +175,6 @@ const App = () => {
                 } 
               />
               <Route 
-                path="/research" 
-                element={
-                  <ProtectedRoute>
-                    <Research />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
                 path="/business-plan" 
                 element={
                   <ProtectedRoute>
@@ -190,10 +183,27 @@ const App = () => {
                 } 
               />
               <Route 
+                path="/marketing-strategy" 
+                element={
+                  <ProtectedRoute>
+                    <MarketingStrategy />
+                  </ProtectedRoute>
+                } 
+              />
+              {/* Legacy routes redirect to new unified page */}
+              <Route 
+                path="/research" 
+                element={
+                  <ProtectedRoute>
+                    <MarketingStrategy />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/marketing" 
                 element={
                   <ProtectedRoute>
-                    <Marketing />
+                    <MarketingStrategy />
                   </ProtectedRoute>
                 } 
               />
@@ -243,9 +253,10 @@ const App = () => {
                 {/* Global Components */}
                 <StickyCtaBar />
               </BrowserRouter>
-            </NotificationProvider>
-          </TooltipProvider>
-        </QueryClientProvider>
+              </NotificationProvider>
+            </TooltipProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
       </HelmetProvider>
     </ErrorBoundary>
   );

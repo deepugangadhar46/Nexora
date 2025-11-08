@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Menu, X, ChevronDown, Moon, Sun, Search, Bell, User as UserIcon, Sparkles, Settings, LogOut, CreditCard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "next-themes";
 import { useStore } from "@/store/useStore";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationCenter from "./NotificationCenter";
@@ -21,7 +22,8 @@ const Navbar = () => {
     credits: number;
   } | null>(null);
   
-  const { theme, toggleTheme, searchQuery, setSearchQuery } = useStore();
+  const { theme, setTheme } = useTheme();
+  const { searchQuery, setSearchQuery } = useStore();
 
   useEffect(() => {
     let ticking = false;
@@ -60,14 +62,9 @@ const Navbar = () => {
     }
   }, []);
 
-  useEffect(() => {
-    // Apply theme to document
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
+  const toggleThemeMode = useCallback(() => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  }, [theme, setTheme]);
 
   const toggleMenu = useCallback(() => {
     setIsMenuOpen(prev => {
@@ -229,7 +226,7 @@ const Navbar = () => {
             <motion.button
               whileHover={{ scale: 1.1, rotate: 180 }}
               whileTap={{ scale: 0.9 }}
-              onClick={toggleTheme}
+              onClick={toggleThemeMode}
               className={cn(
                 "p-2 rounded-full transition-colors",
                 isScrolled ? "hover:bg-orange-50 dark:hover:bg-gray-800 text-orange-500 dark:text-white" : "hover:bg-orange-50 dark:hover:bg-gray-800 text-orange-500 dark:text-white"
@@ -544,7 +541,7 @@ const Navbar = () => {
                   {[
                     { name: 'Dashboard', path: '/dashboard' },
                     { name: 'Idea Validation', path: '/idea-validation' },
-                    { name: 'Market Research', path: '/research' },
+                    { name: 'Marketing Strategy', path: '/marketing-strategy' },
                     { name: 'Business Plan', path: '/business-plan' },
                     { name: 'MVP Development', path: '/mvp-development' },
                     { name: 'Pricing', path: '/pricing' },

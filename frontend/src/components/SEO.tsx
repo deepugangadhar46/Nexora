@@ -1,4 +1,6 @@
 import { Helmet } from 'react-helmet-async';
+import { useLocation } from 'react-router-dom';
+import { SITE_URL, IS_PRODUCTION } from '@/lib/config';
 
 interface SEOProps {
   title?: string;
@@ -17,15 +19,21 @@ const SEO = ({
   description = 'Transform your startup ideas into reality with AI-powered validation, market research, business planning, and MVP development.',
   keywords = 'AI startup builder, MVP development, business plan generator, market research AI, startup validation',
   image = '/og-image-update.png',
-  url = 'https://nexora.ai',
+  url,
   type = 'website',
   author = 'NEXORA Team',
   publishedTime,
   modifiedTime,
 }: SEOProps) => {
+  const location = useLocation();
+  
+  // Use provided URL or construct from current location
+  const baseUrl = IS_PRODUCTION ? 'https://nexora.ai' : SITE_URL;
+  const currentPath = url || location.pathname;
+  
   const fullTitle = title.includes('NEXORA') ? title : `${title} | NEXORA`;
-  const fullUrl = url.startsWith('http') ? url : `https://nexora.ai${url}`;
-  const fullImage = image.startsWith('http') ? image : `https://nexora.ai${image}`;
+  const fullUrl = currentPath.startsWith('http') ? currentPath : `${baseUrl}${currentPath}`;
+  const fullImage = image.startsWith('http') ? image : `${baseUrl}${image}`;
 
   return (
     <Helmet>

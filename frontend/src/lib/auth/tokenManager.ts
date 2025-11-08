@@ -1,4 +1,5 @@
 // Token Manager for JWT refresh flow
+import { API_BASE_URL } from '../config';
 
 interface TokenData {
   access_token: string;
@@ -62,8 +63,7 @@ class TokenManager {
     }
 
     try {
-      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${backendUrl}/api/auth/refresh`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

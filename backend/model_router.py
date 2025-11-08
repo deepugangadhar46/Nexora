@@ -47,10 +47,17 @@ class ModelRouter:
     
     def __init__(self):
         """Initialize model router with API keys and configuration"""
-        # Load API keys
-        self.minimax_key = os.getenv("HF_TOKEN")
-        self.groq_key = os.getenv("GROQ_API_KEY")
-        self.kimi_key = os.getenv("KIMI_API_KEY")
+        # Load API keys (with support for multiple keys per model)
+        self.minimax_keys = self._load_multiple_keys("HF_TOKEN")
+        self.groq_keys = self._load_multiple_keys("GROQ_API_KEY")
+        self.kimi_keys = self._load_multiple_keys("KIMI_API_KEY")
+        
+        # Track current key index for each model (for rotation)
+        self.current_key_index = {
+            "minimax": 0,
+            "groq": 0,
+            "kimi": 0
+        }
         
         # Load configuration
         self.mvp_primary = os.getenv("MVP_PRIMARY_MODEL", "minimax").lower()
@@ -59,6 +66,12 @@ class ModelRouter:
         
         # Check available models
         self.available_models = self._check_available_models()
+        
+        # Log key counts
+        logger.info(f"API Keys loaded:")
+        logger.info(f"  - MiniMax/HF: {len(self.minimax_keys)} key(s)")
+        logger.info(f"  - Groq: {len(self.groq_keys)} key(s)")
+        logger.info(f"  - Kimi: {len(self.kimi_keys)} key(s)")
         
         # Log configuration
         logger.info(f"Model Router initialized:")
@@ -70,15 +83,50 @@ class ModelRouter:
         if not self.available_models:
             logger.error("⚠️ No AI models available! Please configure at least one API key.")
     
+    def _load_multiple_keys(self, env_var_prefix: str) -> List[str]:
+        """Load multiple API keys from environment variables
+        
+        Supports two formats:
+        1. Comma-separated: HF_TOKEN=key1,key2,key3
+        2. Numbered variables: HF_TOKEN_1=key1, HF_TOKEN_2=key2, HF_TOKEN_3=key3
+        """
+        keys = []
+        
+        # Try comma-separated format first
+        main_key = os.getenv(env_var_prefix)
+        if main_key:
+            # Split by comma and strip whitespace
+            keys.extend([k.strip() for k in main_key.split(',') if k.strip()])
+        
+        # Try numbered format (HF_TOKEN_1, HF_TOKEN_2, etc.)
+        i = 1
+        while True:
+            numbered_key = os.getenv(f"{env_var_prefix}_{i}")
+            if numbered_key:
+                keys.append(numbered_key.strip())
+                i += 1
+            else:
+                break
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_keys = []
+        for key in keys:
+            if key not in seen:
+                seen.add(key)
+                unique_keys.append(key)
+        
+        return unique_keys
+    
     def _check_available_models(self) -> List[str]:
         """Check which AI models are available based on API keys"""
         available = []
         
-        if self.minimax_key:
+        if self.minimax_keys:
             available.append("minimax")
-        if self.groq_key:
+        if self.groq_keys:
             available.append("groq")
-        if self.kimi_key:
+        if self.kimi_keys:
             available.append("kimi")
         
         return available
@@ -156,8 +204,9 @@ class ModelRouter:
             "minimax": {
                 "base_url": "https://router.huggingface.co/v1",
                 "model": "MiniMaxAI/MiniMax-M2",
-                "api_key": self.minimax_key,
-                "max_tokens": 32000,
+                "api_key": self.get_api_key("minimax"),
+                "all_keys": self.minimax_keys,
+                "max_tokens": 16384,  # Optimized for single-file generation (reduced from 65536)
                 "temperature": 0.7,
                 "top_p": 0.95,
                 "best_for": ["code_generation", "mvp_development", "long_responses"],
@@ -166,7 +215,8 @@ class ModelRouter:
             "groq": {
                 "base_url": "https://api.groq.com/openai/v1",
                 "model": "llama-3.3-70b-versatile",
-                "api_key": self.groq_key,
+                "api_key": self.get_api_key("groq"),
+                "all_keys": self.groq_keys,
                 "max_tokens": 8000,
                 "temperature": 0.7,
                 "top_p": 0.95,
@@ -176,7 +226,8 @@ class ModelRouter:
             "kimi": {
                 "base_url": "https://api.moonshot.cn/v1",
                 "model": "moonshot-v1-8k",
-                "api_key": self.kimi_key,
+                "api_key": self.get_api_key("kimi"),
+                "all_keys": self.kimi_keys,
                 "max_tokens": 8000,
                 "temperature": 0.7,
                 "top_p": 0.95,
@@ -187,14 +238,60 @@ class ModelRouter:
         
         return configs.get(model_name, {})
     
-    def get_api_key(self, model_name: str) -> Optional[str]:
-        """Get API key for a specific model"""
-        keys = {
-            "minimax": self.minimax_key,
-            "groq": self.groq_key,
-            "kimi": self.kimi_key
+    def get_api_key(self, model_name: str, rotate: bool = False) -> Optional[str]:
+        """Get API key for a specific model
+        
+        Args:
+            model_name: Name of the model
+            rotate: If True, rotate to next available key (useful after rate limit/failure)
+            
+        Returns:
+            API key string or None if no keys available
+        """
+        key_lists = {
+            "minimax": self.minimax_keys,
+            "groq": self.groq_keys,
+            "kimi": self.kimi_keys
         }
-        return keys.get(model_name)
+        
+        keys = key_lists.get(model_name, [])
+        if not keys:
+            return None
+        
+        # Rotate to next key if requested
+        if rotate and len(keys) > 1:
+            self.current_key_index[model_name] = (self.current_key_index[model_name] + 1) % len(keys)
+            logger.info(f"🔄 Rotating {model_name} API key to index {self.current_key_index[model_name]}")
+        
+        current_idx = self.current_key_index.get(model_name, 0)
+        return keys[current_idx]
+    
+    def get_all_keys_for_model(self, model_name: str) -> List[str]:
+        """Get all available API keys for a model
+        
+        Args:
+            model_name: Name of the model
+            
+        Returns:
+            List of API keys
+        """
+        key_lists = {
+            "minimax": self.minimax_keys,
+            "groq": self.groq_keys,
+            "kimi": self.kimi_keys
+        }
+        return key_lists.get(model_name, [])
+    
+    def rotate_key(self, model_name: str) -> Optional[str]:
+        """Rotate to the next API key for a model
+        
+        Args:
+            model_name: Name of the model
+            
+        Returns:
+            Next API key or None
+        """
+        return self.get_api_key(model_name, rotate=True)
     
     def is_model_available(self, model_name: str) -> bool:
         """Check if a specific model is available"""

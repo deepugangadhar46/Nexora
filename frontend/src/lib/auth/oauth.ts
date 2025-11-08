@@ -1,13 +1,15 @@
+import { API_BASE_URL, OAUTH_CONFIG as CONFIG } from '../config';
+
 // OAuth Configuration
 export const OAUTH_CONFIG = {
   google: {
-    clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+    clientId: CONFIG.google.clientId,
     redirectUri: `${window.location.origin}/auth/google/callback`,
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     scope: 'openid profile email',
   },
   github: {
-    clientId: import.meta.env.VITE_GITHUB_CLIENT_ID || '',
+    clientId: CONFIG.github.clientId,
     redirectUri: `${window.location.origin}/auth/github/callback`,
     authUrl: 'https://github.com/login/oauth/authorize',
     scope: 'read:user user:email',
@@ -56,22 +58,31 @@ export const handleOAuthCallback = async (
   try {
     // Verify state
     if (!verifyOAuthState(provider, state)) {
-      throw new Error('Invalid state parameter');
+      throw new Error('Invalid state parameter - possible CSRF attack');
     }
 
-    // Exchange code for token via backend
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-    const response = await fetch(`${backendUrl}/api/auth/oauth/${provider}/callback`, {
-      method: 'POST',
+    // Exchange code for token via backend (GET request with query params to match backend)
+    const params = new URLSearchParams({ code });
+    if (state) {
+      params.append('state', state);
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/api/auth/${provider}/callback?${params.toString()}`, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
-      body: JSON.stringify({ code }),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'OAuth authentication failed');
+      let errorMessage = 'OAuth authentication failed';
+      try {
+        const error = await response.json();
+        errorMessage = error.message || error.detail || errorMessage;
+      } catch {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
@@ -88,13 +99,16 @@ export const handleOAuthCallback = async (
       localStorage.setItem('userId', data.user.id);
       localStorage.setItem('userName', data.user.name);
       localStorage.setItem('userEmail', data.user.email);
-      localStorage.setItem('userCredits', data.user.credits || '0');
+      localStorage.setItem('userCredits', data.user.credits?.toString() || '0');
+      if (data.user.subscription_tier) {
+        localStorage.setItem('userSubscription', data.user.subscription_tier);
+      }
     }
 
     return { success: true, user: data.user };
   } catch (error: any) {
     console.error('OAuth callback error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || 'Authentication failed' };
   }
 };
 

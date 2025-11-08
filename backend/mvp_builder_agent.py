@@ -30,6 +30,7 @@ from prompt_templates_html import (
     detect_prompt_type,
     get_html_system_prompt
 )
+from model_router import model_router, TaskType
 
 # Load environment variables
 load_dotenv()
@@ -49,8 +50,6 @@ logger = logging.getLogger(__name__)
 class AIModel(Enum):
     """Supported AI models"""
     MINIMAX = "minimax"
-    GROQ = "groq"
-    KIMI = "kimi"
 
 
 class SandboxStatus(Enum):
@@ -150,48 +149,39 @@ class MVPBuilderAgent:
     
     def __init__(self):
         """Initialize the MVP Builder Agent"""
-        self.minimax_api_key = os.getenv("HF_TOKEN")  # HF_TOKEN for Hugging Face
-        self.groq_api_key = os.getenv("GROQ_API_KEY")
-        self.kimi_api_key = os.getenv("KIMI_API_KEY")
+        # Use model_router to check for available keys (supports multiple keys per model)
+        self.minimax_keys = model_router.get_all_keys_for_model("minimax")
+        
         self.firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
         self.e2b_api_key = os.getenv("E2B_API_KEY")
         
         # Validate required API keys
-        if not self.minimax_api_key:
-            logger.warning("HF_TOKEN not found - MiniMax AI model will not be available")
-        if not self.groq_api_key:
-            logger.warning("GROQ_API_KEY not found - Groq AI model will not be available")
-        if not self.kimi_api_key:
-            logger.warning("KIMI_API_KEY not found - Kimi AI model will not be available")
+        if not self.minimax_keys:
+            logger.error("❌ HF_TOKEN not found! Please configure HF_TOKEN_1, HF_TOKEN_2, HF_TOKEN_3 for MiniMax")
+            raise ValueError("MiniMax API keys (HF_TOKEN) are required. Please add HF_TOKEN_1, HF_TOKEN_2, HF_TOKEN_3 to your .env file")
+        else:
+            logger.info(f"✅ MiniMax available with {len(self.minimax_keys)} API key(s) for automatic fallback")
+            for i, key in enumerate(self.minimax_keys, 1):
+                masked = key[:10] + "..." + key[-5:] if len(key) > 15 else "***"
+                logger.info(f"   Key {i}: {masked}")
+            
         if not self.e2b_api_key:
             logger.warning("E2B_API_KEY not found - Sandbox functionality will not be available")
         if not self.firecrawl_api_key:
             logger.warning("FIRECRAWL_API_KEY not found - Website scraping will not be available")
             
-        # Check if at least one AI model is available
-        available_models = []
-        if self.minimax_api_key:
-            available_models.append("MiniMax")
-        if self.groq_api_key:
-            available_models.append("Groq")
-        if self.kimi_api_key:
-            available_models.append("Kimi")
-            
-        if not available_models:
-            logger.error("No AI API keys found! Please configure at least one: HF_TOKEN, GROQ_API_KEY, or KIMI_API_KEY")
-        else:
-            logger.info(f"Available AI models: {', '.join(available_models)}")
+        logger.info(f"🚀 MVP Builder using MiniMax AI with {len(self.minimax_keys)}-key fallback system")
             
         # Initialize conversation states
         self.conversations: Dict[str, ConversationState] = {}
         self.active_sandboxes: Dict[str, SandboxInfo] = {}
         
-        # AI model configurations
+        # AI model configuration (MiniMax only with multi-key fallback)
         self.model_configs = {
             AIModel.MINIMAX: {
                 "base_url": "https://router.huggingface.co/v1",
                 "model": "MiniMaxAI/MiniMax-M2",
-                "max_tokens": 32000,  # Hugging Face limit is 32768, using 32000 for safety
+                "max_tokens": 16384,  # Optimized for single-file generation
                 "retry_on_rate_limit": True,
                 "retry_delay": 5,
                 "max_retries": 3,
@@ -201,24 +191,6 @@ class MVPBuilderAgent:
                 "presence_penalty": 0.0,  # Set to 0 to allow similar patterns across files
                 "stream_chunk_size": 512,  # Optimal chunk size for streaming
                 "stop": None  # Don't use stop sequences - let model complete fully
-            },
-            AIModel.GROQ: {
-                "base_url": "https://api.groq.com/openai/v1",
-                "model": "llama-3.3-70b-versatile",  # Updated from deprecated llama-3.1-70b-versatile
-                "max_tokens": 8000,  # Increased from 4000
-                "temperature": 0.7,
-                "top_p": 0.95,
-                "frequency_penalty": 0.2,
-                "presence_penalty": 0.2
-            },
-            AIModel.KIMI: {
-                "base_url": "https://api.moonshot.cn/v1",
-                "model": "moonshot-v1-32k",
-                "max_tokens": 8000,  # Increased from 4000
-                "temperature": 0.7,
-                "top_p": 0.95,
-                "frequency_penalty": 0.2,
-                "presence_penalty": 0.2
             }
         }
         
@@ -230,26 +202,25 @@ class MVPBuilderAgent:
         model: AIModel = AIModel.MINIMAX,
         system_prompt: Optional[str] = None,
         stream: bool = False,
-        retry_count: int = 0
+        retry_count: int = 0,
+        key_rotation_count: int = 0
     ) -> AsyncGenerator[str, None] or str:
-        """Get AI response from specified model with intelligent retry logic and fallback"""
+        """Get AI response from specified model with intelligent retry logic, key rotation, and fallback"""
         
         try:
             config = self.model_configs[model]
-            logger.info(f"🤖 AI Request - Model: {model.value.upper()} | Endpoint: {config['base_url']} | Model ID: {config['model']} | Stream: {stream}")
             
-            # Select API key based on model
-            if model == AIModel.MINIMAX:
-                api_key = self.minimax_api_key
-            elif model == AIModel.GROQ:
-                api_key = self.groq_api_key
-            elif model == AIModel.KIMI:
-                api_key = self.kimi_api_key
-            else:
-                raise ValueError(f"Unsupported model: {model}")
-                
+            # Get current API key from model router (supports multiple keys)
+            api_key = model_router.get_api_key(model.value)
+            
             if not api_key:
                 raise ValueError(f"API key not found for model: {model}")
+            
+            # Get all available keys for this model
+            all_keys = model_router.get_all_keys_for_model(model.value)
+            key_info = f" (Key {key_rotation_count + 1}/{len(all_keys)})" if len(all_keys) > 1 else ""
+            
+            logger.info(f"🤖 AI Request - Model: {model.value.upper()}{key_info} | Endpoint: {config['base_url']} | Model ID: {config['model']} | Stream: {stream}")
             
             headers = {
                 "Authorization": f"Bearer {api_key}",
@@ -285,21 +256,53 @@ class MVPBuilderAgent:
                     if not response.ok:
                         error_text = await response.text()
                         
-                        # Check for rate limit (429) and retry if configured
-                        if response.status == 429 and config.get("retry_on_rate_limit") and retry_count < config.get("max_retries", 0):
-                            retry_delay = config.get("retry_delay", 5)
-                            logger.warning(f"Rate limited by {model.value.upper()}. Retrying in {retry_delay}s... (attempt {retry_count + 1}/{config.get('max_retries')})")
-                            await asyncio.sleep(retry_delay)
+                        # Check if error indicates rate limit or quota exhaustion
+                        is_rate_limit = response.status == 429
+                        is_quota_exhausted = any(phrase in error_text.lower() for phrase in [
+                            "exceeded your monthly included credits",
+                            "quota exceeded",
+                            "rate limit",
+                            "too many requests",
+                            "insufficient credits"
+                        ])
+                        
+                        # Try rotating to next API key for rate limits or quota issues
+                        if is_rate_limit or is_quota_exhausted:
+                            all_keys = model_router.get_all_keys_for_model(model.value)
                             
-                            # Retry the request
-                            if stream:
-                                async for chunk in self.get_ai_response(prompt, model, system_prompt, stream, retry_count + 1):
-                                    yield chunk
-                                return
-                            else:
-                                async for chunk in self.get_ai_response(prompt, model, system_prompt, stream, retry_count + 1):
-                                    yield chunk
-                                return
+                            # If we have more keys to try, rotate and retry
+                            if len(all_keys) > 1 and key_rotation_count < len(all_keys) - 1:
+                                error_type = "Rate limited" if is_rate_limit else "Quota/credits exhausted"
+                                logger.warning(f"⚠️ {error_type} for {model.value.upper()} (Key {key_rotation_count + 1}/{len(all_keys)}). Rotating to next API key...")
+                                
+                                # Rotate to next key
+                                model_router.rotate_key(model.value)
+                                
+                                # Retry with new key
+                                if stream:
+                                    async for chunk in self.get_ai_response(prompt, model, system_prompt, stream, retry_count, key_rotation_count + 1):
+                                        yield chunk
+                                    return
+                                else:
+                                    async for chunk in self.get_ai_response(prompt, model, system_prompt, stream, retry_count, key_rotation_count + 1):
+                                        yield chunk
+                                    return
+                            
+                            # All keys exhausted, try delay-based retry if configured
+                            elif config.get("retry_on_rate_limit") and retry_count < config.get("max_retries", 0):
+                                retry_delay = config.get("retry_delay", 5)
+                                logger.warning(f"⚠️ All {len(all_keys)} keys exhausted for {model.value.upper()}. Retrying in {retry_delay}s... (attempt {retry_count + 1}/{config.get('max_retries')})")
+                                await asyncio.sleep(retry_delay)
+                                
+                                # Retry the request
+                                if stream:
+                                    async for chunk in self.get_ai_response(prompt, model, system_prompt, stream, retry_count + 1, 0):
+                                        yield chunk
+                                    return
+                                else:
+                                    async for chunk in self.get_ai_response(prompt, model, system_prompt, stream, retry_count + 1, 0):
+                                        yield chunk
+                                    return
                         
                         logger.error(f"AI API error ({model}): {error_text}")
                         raise Exception(f"AI API error: {error_text}")
@@ -340,6 +343,20 @@ class MVPBuilderAgent:
                         except asyncio.CancelledError:
                             logger.warning(f"Stream cancelled for {model.value}")
                             return
+                        except (aiohttp.ClientPayloadError, aiohttp.ClientError) as stream_error:
+                            # Network/streaming errors - retry with same key if retries available
+                            if retry_count < config.get("max_retries", 3):
+                                retry_delay = min(2 ** retry_count, 10)  # Exponential backoff, max 10s
+                                logger.warning(f"⚠️ Stream interrupted ({type(stream_error).__name__}). Retrying in {retry_delay}s... (attempt {retry_count + 1}/{config.get('max_retries', 3)})")
+                                await asyncio.sleep(retry_delay)
+                                
+                                # Retry with same key (don't increment key_rotation_count)
+                                async for chunk in self.get_ai_response(prompt, model, system_prompt, stream, retry_count + 1, key_rotation_count):
+                                    yield chunk
+                                return
+                            else:
+                                # Max retries exceeded, propagate error
+                                raise
                     else:
                         data = await response.json()
                         if 'choices' in data and data['choices']:
@@ -347,47 +364,27 @@ class MVPBuilderAgent:
                         else:
                             raise Exception("No response from AI model")
                             
+        except (aiohttp.ClientPayloadError, aiohttp.ClientError) as network_error:
+            # Network errors that weren't caught by inner handler (max retries exceeded)
+            error_msg = str(network_error)
+            logger.error(f"❌ Network error after {config.get('max_retries', 3)} retries from {model.value.upper()}: {error_msg}")
+            raise Exception(f"Network error: Stream interrupted after multiple retries. {error_msg}")
+            
         except Exception as e:
-            logger.error(f"Error getting AI response from {model}: {str(e)}")
+            error_msg = str(e)
+            logger.error(f"❌ Error getting AI response from {model.value.upper()}: {error_msg}")
             
-            # Determine available fallback models
-            fallback_models = []
-            if model == AIModel.MINIMAX:
-                pass
-            elif model == AIModel.GROQ:
-                if self.kimi_api_key:
-                    fallback_models.append(AIModel.KIMI)
-                if self.minimax_api_key:
-                    fallback_models.append(AIModel.MINIMAX)
-            elif model == AIModel.KIMI:
-                if self.minimax_api_key:
-                    fallback_models.append(AIModel.MINIMAX)
-                if self.groq_api_key:
-                    fallback_models.append(AIModel.GROQ)
+            # Check if this is already a wrapped "All keys failed" error
+            if "All" in error_msg and "keys failed or exhausted" in error_msg:
+                # Already wrapped, just re-raise
+                raise
             
-            # Try fallback models
-            for fallback_model in fallback_models:
-                try:
-                    logger.info(f"Falling back to {fallback_model.value.upper()} model")
-                    if stream:
-                        async for chunk in self.get_ai_response(prompt, fallback_model, system_prompt, stream):
-                            yield chunk
-                        return
-                    else:
-                        async for chunk in self.get_ai_response(prompt, fallback_model, system_prompt, stream):
-                            yield chunk
-                        return
-                except Exception as fallback_error:
-                    logger.error(f"Fallback to {fallback_model.value} also failed: {str(fallback_error)}")
-                    continue
-            
-            # If all fallbacks failed, raise the original error with helpful message
-            available_models = [m for m in [AIModel.MINIMAX, AIModel.GROQ, AIModel.KIMI] 
-                             if getattr(self, f"{m.value}_api_key")]
-            if not available_models:
-                raise Exception("No AI models available. Please configure at least one API key: HF_TOKEN, GROQ_API_KEY, or KIMI_API_KEY")
+            # All key rotation is handled above in the rate limit logic
+            # If we reach here, all keys have been exhausted or there's a different error
+            if not self.minimax_keys:
+                raise Exception("No MiniMax API keys available. Please configure HF_TOKEN_1, HF_TOKEN_2, HF_TOKEN_3 in your .env file")
             else:
-                raise Exception(f"All available AI models failed. Original error: {str(e)}")
+                raise Exception(f"All {len(self.minimax_keys)} MiniMax API keys failed or exhausted. Original error: {error_msg}")
 
     async def scrape_website(self, url: str, include_screenshot: bool = True) -> Dict[str, Any]:
         """Scrape website content using FireCrawl"""

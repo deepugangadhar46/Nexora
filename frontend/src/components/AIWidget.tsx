@@ -17,7 +17,7 @@ const AIWidget = () => {
   const [isMinimized, setIsMinimized] = useState(false);
   
   // Don't show on dashboard or other protected routes to avoid interference
-  const hiddenRoutes = ['/dashboard', '/idea-validation', '/mvp-development', '/business-plan', '/research', '/marketing', '/team-collaboration', '/pitch-deck', '/profile', '/settings'];
+  const hiddenRoutes = ['/dashboard', '/idea-validation', '/mvp-development', '/business-plan', '/marketing-strategy', '/team-collaboration', '/pitch-deck', '/profile', '/settings'];
   const shouldHide = hiddenRoutes.some(route => location.pathname.startsWith(route));
   
   if (shouldHide) {

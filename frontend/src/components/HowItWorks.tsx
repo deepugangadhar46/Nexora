@@ -16,26 +16,26 @@ const StepCard = ({ number, title, description, isActive, onClick }: StepCardPro
       className={cn(
         "rounded-xl p-6 cursor-pointer transition-all duration-500 border",
         isActive 
-          ? "bg-white shadow-elegant border-pulse-200" 
-          : "bg-white/50 hover:bg-white/80 border-transparent"
+          ? "bg-white dark:bg-gray-800 shadow-elegant border-pulse-200 dark:border-pulse-400" 
+          : "bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-700/80 border-transparent"
       )}
       onClick={onClick}
     >
       <div className="flex items-start">
         <div className={cn(
           "flex items-center justify-center rounded-full w-10 h-10 mr-4 flex-shrink-0 transition-colors duration-300",
-          isActive ? "bg-pulse-500 text-white" : "bg-gray-100 text-gray-500"
+          isActive ? "bg-pulse-500 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
         )}>
           {number}
         </div>
         <div>
           <h3 className={cn(
             "text-lg font-semibold mb-2 transition-colors duration-300",
-            isActive ? "text-pulse-600" : "text-gray-800"
+            isActive ? "text-pulse-600 dark:text-pulse-400" : "text-gray-800 dark:text-gray-200"
           )}>
             {title}
           </h3>
-          <p className="text-gray-600 text-sm">{description}</p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">{description}</p>
         </div>
       </div>
     </div>
@@ -48,27 +48,27 @@ const HowItWorks = () => {
   const stepsData = [
     {
       number: "01",
-      title: "Request Access",
-      description: "Fill out the application form to join our early access program and secure your spot in line.",
-      image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=800&q=80"
+      title: "Describe Your Idea",
+      description: "Share your startup vision in plain English. No technical knowledge required - just your innovative idea.",
+      image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80"
     },
     {
       number: "02",
-      title: "Personalization",
-      description: "We'll work with you to customize Atlas to your specific needs and preferences.",
-      image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80"
+      title: "AI Analysis & Research",
+      description: "Our AI agents analyze your market, identify opportunities, and generate comprehensive research reports.",
+      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80"
     },
     {
       number: "03",
-      title: "Integration",
-      description: "Atlas arrives at your location and is integrated into your living or working environment.",
-      image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=800&q=80"
+      title: "MVP Development",
+      description: "Watch as AI builds your minimum viable product with production-ready code and modern design.",
+      image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80"
     },
     {
       number: "04",
-      title: "Adaptation",
-      description: "Through daily interaction, Atlas learns and adapts to your routines, preferences, and needs.",
-      image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80"
+      title: "Launch & Scale",
+      description: "Deploy your startup with AI-generated pitch decks, marketing materials, and growth strategies.",
+      image: "https://images.unsplash.com/photo-1�680-1640622300473-977435c38c28?auto=format&fit=crop&w=800&q=80"
     }
   ];
 
@@ -108,19 +108,19 @@ const HowItWorks = () => {
   }, []);
   
   return (
-    <section className="py-20 bg-white relative" id="how-it-works" ref={sectionRef}>
+    <section className="py-20 bg-white dark:bg-gray-900 relative transition-colors duration-300" id="how-it-works" ref={sectionRef}>
       {/* Background decorative elements */}
-      <div className="absolute -top-20 right-0 w-72 h-72 bg-pulse-50 rounded-full opacity-60 blur-3xl -z-10"></div>
-      <div className="absolute bottom-0 left-10 w-64 h-64 bg-gray-50 rounded-full opacity-70 blur-3xl -z-10"></div>
+      <div className="absolute -top-20 right-0 w-72 h-72 bg-pulse-50 dark:bg-pulse-900/20 rounded-full opacity-60 blur-3xl -z-10"></div>
+      <div className="absolute bottom-0 left-10 w-64 h-64 bg-gray-50 dark:bg-gray-800/50 rounded-full opacity-70 blur-3xl -z-10"></div>
       
       <div className="section-container">
         <div className="text-center mb-16 opacity-0 fade-in-stagger">
           <div className="pulse-chip mx-auto mb-4">
             <span>Process</span>
           </div>
-          <h2 className="section-title mb-4">How Atlas Integrates Into Your Life</h2>
-          <p className="section-subtitle mx-auto">
-            A seamless four-step process from request to full integration.
+          <h2 className="section-title mb-4 text-gray-900 dark:text-white">How It Works</h2>
+          <p className="section-subtitle mx-auto text-gray-600 dark:text-gray-300">
+            A seamless four-step process to transform your startup idea into reality.
           </p>
         </div>
         

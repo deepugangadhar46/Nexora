@@ -173,10 +173,17 @@ class GroqClient:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
-            raise ValueError("GROQ_API_KEY not found in environment variables")
+            error_msg = (
+                "GROQ_API_KEY not found in environment variables. "
+                "Please add GROQ_API_KEY=your_key to backend/.env file. "
+                "Get your key from https://console.groq.com/"
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
         
         self.base_url = "https://api.groq.com/openai/v1"
         self.model = "llama-3.3-70b-versatile"  # Using Llama 3.3 70B
+        logger.info(f"GroqClient initialized with model: {self.model}")
         
     async def generate(
         self,
@@ -423,23 +430,31 @@ class MarketResearchAgent:
         prompt = f"""
         Identify the top {limit} competitors in the {industry} industry, specifically targeting the {target_segment} segment.
         
-        For each competitor, provide:
-        1. Company name
-        2. Brief description (1-2 sentences)
-        3. Website URL (if known)
-        4. Estimated funding amount or funding stage
-        5. Approximate team size
-        6. Year founded (if known)
-        7. 3-5 key strengths
-        8. 3-5 key weaknesses
-        9. Pricing model (Freemium, Subscription, etc.)
-        10. Market position (Leader, Challenger, Niche, etc.)
+        Return ONLY valid JSON in this exact format:
+        {{
+          "competitors": [
+            {{
+              "name": "Company Name Here",
+              "description": "Brief description of what they do",
+              "url": "https://company-website.com",
+              "funding": "Series A - $10M" or "Bootstrap" or "Public",
+              "team_size": "50-100" or "100+" or "10-50",
+              "founded": "2020" or "2015",
+              "strengths": ["Strength 1", "Strength 2", "Strength 3"],
+              "weaknesses": ["Weakness 1", "Weakness 2", "Weakness 3"],
+              "pricing_model": "Freemium" or "Subscription" or "One-time" or "Enterprise",
+              "market_position": "Leader" or "Challenger" or "Niche" or "Emerging"
+            }}
+          ]
+        }}
         
-        Return the data as a JSON array of competitors.
+        Include real, well-known companies in the {industry} space. Do not use placeholder names.
         """
         
         system_prompt = """You are a market research expert specializing in competitive analysis. 
-        Provide accurate, data-driven insights about competitors. Return valid JSON only."""
+        Provide accurate, data-driven insights about real competitors. 
+        Always include actual company names, never use "Unknown" or placeholders.
+        Return valid JSON only."""
         
         try:
             response = await self.groq.generate(
@@ -450,32 +465,47 @@ class MarketResearchAgent:
                 json_mode=True
             )
             
+            logger.debug(f"Raw competitor response: {response[:500]}...")  # Log first 500 chars
+            
             data = json.loads(response)
             competitors = []
             
             # Parse the response
             competitor_list = data.get("competitors", [])
             
+            if not competitor_list:
+                logger.warning("No competitors found in response, trying alternative key")
+                # Try alternative keys in case the format is different
+                if isinstance(data, list):
+                    competitor_list = data
+                else:
+                    competitor_list = data.get("data", [])
+            
             for comp_data in competitor_list[:limit]:
+                # More robust parsing with multiple fallback options
+                name = comp_data.get("name") or comp_data.get("company_name") or comp_data.get("company") or "Unknown Company"
+                
                 competitor = Competitor(
-                    name=comp_data.get("name", "Unknown"),
+                    name=name,
                     description=comp_data.get("description", ""),
-                    url=comp_data.get("url"),
-                    funding=comp_data.get("funding"),
-                    team_size=comp_data.get("team_size"),
-                    founded=comp_data.get("founded"),
+                    url=comp_data.get("url") or comp_data.get("website"),
+                    funding=comp_data.get("funding") or comp_data.get("funding_stage"),
+                    team_size=comp_data.get("team_size") or comp_data.get("employees"),
+                    founded=comp_data.get("founded") or comp_data.get("year_founded"),
                     strengths=comp_data.get("strengths", []),
                     weaknesses=comp_data.get("weaknesses", []),
-                    pricing_model=comp_data.get("pricing_model"),
-                    market_position=comp_data.get("market_position")
+                    pricing_model=comp_data.get("pricing_model") or comp_data.get("pricing"),
+                    market_position=comp_data.get("market_position") or comp_data.get("position")
                 )
                 competitors.append(competitor)
+                logger.debug(f"Added competitor: {name}")
             
             logger.info(f"Discovered {len(competitors)} competitors")
             return competitors
             
         except Exception as e:
             logger.error(f"Error discovering competitors: {str(e)}")
+            logger.error(f"Response was: {response if 'response' in locals() else 'No response'}")
             raise
     
     # ========================================================================

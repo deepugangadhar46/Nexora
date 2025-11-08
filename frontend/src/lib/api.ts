@@ -1,9 +1,9 @@
 /**
  * API utility functions for making requests to the backend
  */
+import { API_BASE_URL } from './config';
+import { tokenManager } from './auth/tokenManager';
 
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const API_TIMEOUT = 30000; // 30 seconds
 
 // Helper function for API error handling
@@ -11,6 +11,29 @@ class APIError extends Error {
   constructor(public status: number, message: string, public data?: any) {
     super(message);
     this.name = 'APIError';
+  }
+}
+
+/**
+ * Get user-friendly error message based on status code
+ */
+function getUserFriendlyError(status: number, defaultMessage: string): string {
+  switch (status) {
+    case 401:
+      return 'Invalid email or password.';
+    case 403:
+      return 'You do not have permission to perform this action.';
+    case 404:
+      return 'The requested resource was not found.';
+    case 429:
+      return 'Too many attempts. Please try again in a moment.';
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return 'Service temporarily unavailable. Please retry.';
+    default:
+      return defaultMessage;
   }
 }
 
@@ -68,8 +91,15 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.detail || errorMessage;
+      } catch {
+        // Use user-friendly error
+        errorMessage = getUserFriendlyError(response.status, errorMessage);
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
@@ -795,333 +825,11 @@ export interface MarketResearchReport {
   recommendations: string[];
 }
 
-/**
- * Conduct comprehensive market research
- */
-export async function conductMarketResearch(request: {
-  industry: string;
-  target_segment: string;
-  product_description?: string;
-  geographic_scope?: string;
-}): Promise<MarketResearchReport> {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/market-research/research`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        industry: request.industry,
-        target_segment: request.target_segment,
-        product_description: request.product_description || '',
-        geographic_scope: request.geographic_scope || 'Global',
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error conducting market research:', error);
-    throw error;
-  }
-}
-
-/**
- * Discover competitors in a market
- */
-export async function discoverCompetitors(request: {
-  industry: string;
-  target_segment: string;
-  limit?: number;
-}): Promise<MarketCompetitor[]> {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/market-research/competitors`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        industry: request.industry,
-        target_segment: request.target_segment,
-        limit: request.limit || 10,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.competitors || [];
-  } catch (error) {
-    console.error('Error discovering competitors:', error);
-    throw error;
-  }
-}
-
-/**
- * Estimate market size (TAM-SAM-SOM)
- */
-export async function estimateMarketSize(request: {
-  industry: string;
-  target_segment: string;
-  geographic_scope?: string;
-}): Promise<MarketSize> {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/market-research/market-size`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        industry: request.industry,
-        target_segment: request.target_segment,
-        geographic_scope: request.geographic_scope || 'Global',
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error estimating market size:', error);
-    throw error;
-  }
-}
-
-/**
- * Analyze market trends
- */
-export async function analyzeMarketTrends(request: {
-  industry: string;
-  target_segment: string;
-  limit?: number;
-}): Promise<TrendData[]> {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/market-research/trends`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        industry: request.industry,
-        target_segment: request.target_segment,
-        limit: request.limit || 20,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.trends || [];
-  } catch (error) {
-    console.error('Error analyzing trends:', error);
-    throw error;
-  }
-}
-
-/**
- * Extract user sentiment from market
- */
-export async function extractUserSentiment(request: {
-  industry: string;
-  target_segment: string;
-  competitors?: string[];
-}): Promise<SentimentData[]> {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/market-research/sentiment`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        industry: request.industry,
-        target_segment: request.target_segment,
-        competitors: request.competitors || [],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.sentiment || [];
-  } catch (error) {
-    console.error('Error extracting sentiment:', error);
-    throw error;
-  }
-}
-
-/**
- * Analyze competitor pricing
- */
-export async function analyzePricing(request: {
-  competitors: MarketCompetitor[];
-}): Promise<PricingModel[]> {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/market-research/pricing`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        competitors: request.competitors,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.pricing_models || [];
-  } catch (error) {
-    console.error('Error analyzing pricing:', error);
-    throw error;
-  }
-}
-
-/**
- * Generate SWOT analysis
- */
-export async function generateSWOT(request: {
-  industry: string;
-  target_segment: string;
-  product_description: string;
-}): Promise<SWOTAnalysis> {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/market-research/swot`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        industry: request.industry,
-        target_segment: request.target_segment,
-        product_description: request.product_description,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error generating SWOT:', error);
-    throw error;
-  }
-}
-
-/**
- * Identify market gaps (Market Gap Radar)
- */
-export async function identifyMarketGaps(request: {
-  industry: string;
-  target_segment: string;
-  competitors: MarketCompetitor[];
-}): Promise<MarketGap[]> {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/market-research/market-gaps`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        industry: request.industry,
-        target_segment: request.target_segment,
-        competitors: request.competitors,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.market_gaps || [];
-  } catch (error) {
-    console.error('Error identifying market gaps:', error);
-    throw error;
-  }
-}
-
-/**
- * Download market research report (Markdown)
- */
-export async function downloadMarketResearchReport(reportId: string): Promise<Blob> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/market-research/report/${reportId}/markdown`, {
-      method: 'GET',
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const blob = await response.blob();
-    return blob;
-  } catch (error) {
-    console.error('Error downloading market research report:', error);
-    throw error;
-  }
-}
-
-/**
- * Check Market Research Agent health
- */
-export async function checkMarketResearchHealth() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/market-research/health`, {
-      method: 'GET',
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error checking market research health:', error);
-    throw error;
-  }
-}
+// ============================================================================
+// DEPRECATED: Old individual market research functions
+// These have been replaced by the comprehensive marketing strategy endpoint
+// Keeping type definitions for backwards compatibility
+// ============================================================================
 
 // ============================================================================
 // BUSINESS PLANNING API
@@ -1404,41 +1112,7 @@ export async function mapTeamRoles(request: {
   }
 }
 
-/**
- * Build marketing strategy
- */
-export async function buildMarketingStrategy(request: {
-  idea: string;
-  target_audience?: string;
-  budget?: number;
-}): Promise<MarketingStrategy> {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/business-plan/marketing`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        idea: request.idea,
-        target_audience: request.target_audience || '',
-        budget: request.budget || 10000,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data;
-  } catch (error) {
-    console.error('Error building marketing strategy:', error);
-    throw error;
-  }
-}
+// DEPRECATED: buildMarketingStrategy - Use comprehensive marketing strategy endpoint instead
 
 /**
  * Check regulatory compliance

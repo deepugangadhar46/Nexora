@@ -149,7 +149,7 @@ const RecentActivity = () => {
         navigate('/pitch-deck');
         break;
       case 'research':
-        navigate('/research');
+        navigate('/marketing-strategy');
         break;
       case 'team-invite':
         navigate('/team-collaboration');

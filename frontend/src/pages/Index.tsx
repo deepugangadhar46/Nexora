@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import VideoDemo from "@/components/VideoDemo";
 import LiveStats from "@/components/LiveStats";
+import HowItWorks from "@/components/HowItWorks";
 import FAQ from "@/components/FAQ";
 import Features from "@/components/Features";
 import Testimonials from "@/components/Testimonials";
@@ -81,9 +82,10 @@ const Index = () => {
         <Hero />
         <VideoDemo />
         <LiveStats />
-        <FAQ />
+        <HowItWorks />
         <Features />
         <Testimonials />
+        <FAQ />
         <Newsletter />
         <MadeByHumans />
       </main>

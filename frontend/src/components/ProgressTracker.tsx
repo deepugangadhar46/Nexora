@@ -27,12 +27,12 @@ const ProgressTracker = () => {
     },
     {
       id: 'market-research',
-      title: 'Market Research',
-      description: 'Comprehensive market and competitor analysis',
+      title: 'Marketing Strategy',
+      description: 'Comprehensive market research and marketing plans',
       status: 'in-progress',
-      path: '/research',
+      path: '/marketing-strategy',
       estimatedTime: '10 min',
-      credits: 10
+      credits: 5
     },
     {
       id: 'business-plan',

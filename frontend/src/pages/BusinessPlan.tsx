@@ -342,7 +342,7 @@ const BusinessPlan = () => {
 
               {/* Tab Content */}
               <AnimatePresence mode="wait">
-                {activeTab === "canvas" && (
+                {activeTab === "canvas" && businessPlan.lean_canvas && (
                   <motion.div
                     key="canvas"
                     initial={{ opacity: 0, x: -20 }}
@@ -350,30 +350,37 @@ const BusinessPlan = () => {
                     exit={{ opacity: 0, x: 20 }}
                     className="grid grid-cols-1 md:grid-cols-3 gap-6"
                   >
-                    {Object.entries(businessPlan.lean_canvas).map(([key, block]: [string, LeanCanvasBlock], index) => (
-                      <motion.div
-                        key={key}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6"
-                      >
-                        <h4 className="font-bold text-gray-900 dark:text-white mb-3">{block.title}</h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{block.description}</p>
-                        <ul className="space-y-2">
-                          {block.content.map((item, i) => (
-                            <li key={i} className="flex items-start space-x-2">
-                              <CheckCircle className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
-                              <span className="text-sm text-gray-700 dark:text-gray-300">{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </motion.div>
-                    ))}
+                    {Object.entries(businessPlan.lean_canvas || {}).map(([key, block]: [string, LeanCanvasBlock], index) => {
+                      // Ensure block is valid before rendering
+                      if (!block || typeof block !== 'object' || !block.title) {
+                        return null;
+                      }
+                      
+                      return (
+                        <motion.div
+                          key={key}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6"
+                        >
+                          <h4 className="font-bold text-gray-900 dark:text-white mb-3">{block.title}</h4>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{block.description || ''}</p>
+                          <ul className="space-y-2">
+                            {(block.content || []).map((item, i) => (
+                              <li key={i} className="flex items-start space-x-2">
+                                <CheckCircle className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </motion.div>
+                      );
+                    })}
                   </motion.div>
                 )}
 
-                {activeTab === "financials" && (
+                {activeTab === "financials" && businessPlan.financial_estimate && (
                   <motion.div
                     key="financials"
                     initial={{ opacity: 0, x: -20 }}
@@ -384,10 +391,10 @@ const BusinessPlan = () => {
                     {/* Key Metrics */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                       {[
-                        { label: "CAC", value: formatCurrency(businessPlan.financial_estimate.cac), icon: DollarSign },
-                        { label: "LTV", value: formatCurrency(businessPlan.financial_estimate.ltv), icon: TrendingUp },
-                        { label: "LTV:CAC Ratio", value: `${businessPlan.financial_estimate.ltv_cac_ratio.toFixed(1)}x`, icon: BarChart3 },
-                        { label: "Break Even", value: `Month ${businessPlan.financial_estimate.break_even_month}`, icon: Calendar }
+                        { label: "CAC", value: formatCurrency(businessPlan.financial_estimate?.cac || 0), icon: DollarSign },
+                        { label: "LTV", value: formatCurrency(businessPlan.financial_estimate?.ltv || 0), icon: TrendingUp },
+                        { label: "LTV:CAC Ratio", value: `${(businessPlan.financial_estimate?.ltv_cac_ratio || 0).toFixed(1)}x`, icon: BarChart3 },
+                        { label: "Break Even", value: `Month ${businessPlan.financial_estimate?.break_even_month || 0}`, icon: Calendar }
                       ].map((metric, index) => (
                         <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                           <metric.icon className="w-6 h-6 text-purple-500 mb-2" />
@@ -414,7 +421,7 @@ const BusinessPlan = () => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                            {businessPlan.financial_estimate.projections.map((proj, index) => (
+                            {(businessPlan.financial_estimate?.projections || []).map((proj, index) => (
                               <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
                                 <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">Year {proj.year}</td>
                                 <td className="px-6 py-4 text-sm text-right text-gray-700 dark:text-gray-300">{formatCurrency(proj.revenue)}</td>
@@ -437,7 +444,7 @@ const BusinessPlan = () => {
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                       <h4 className="font-bold text-gray-900 dark:text-white mb-4">Key Assumptions</h4>
                       <ul className="space-y-2">
-                        {businessPlan.financial_estimate.assumptions.map((assumption, i) => (
+                        {(businessPlan.financial_estimate?.assumptions || []).map((assumption, i) => (
                           <li key={i} className="flex items-start space-x-2">
                             <CheckCircle className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
                             <span className="text-sm text-gray-700 dark:text-gray-300">{assumption}</span>
@@ -448,7 +455,7 @@ const BusinessPlan = () => {
                   </motion.div>
                 )}
 
-                {activeTab === "team" && (
+                {activeTab === "team" && businessPlan.team_composition && (
                   <motion.div
                     key="team"
                     initial={{ opacity: 0, x: -20 }}
@@ -461,14 +468,14 @@ const BusinessPlan = () => {
                       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                         <Users className="w-8 h-8 text-purple-500 mb-3" />
                         <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                          {businessPlan.team_composition.total_team_size}
+                          {businessPlan.team_composition?.total_team_size || 0}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Total Team Members</div>
                       </div>
                       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                         <DollarSign className="w-8 h-8 text-purple-500 mb-3" />
                         <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                          {formatCurrency(businessPlan.team_composition.estimated_payroll_monthly)}
+                          {formatCurrency(businessPlan.team_composition?.estimated_payroll_monthly || 0)}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Monthly Payroll</div>
                       </div>
@@ -476,7 +483,7 @@ const BusinessPlan = () => {
 
                     {/* Team Roles */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {businessPlan.team_composition.roles.map((role, index) => (
+                      {(businessPlan.team_composition?.roles || []).map((role, index) => (
                         <motion.div
                           key={index}
                           initial={{ opacity: 0, y: 20 }}
@@ -527,7 +534,7 @@ const BusinessPlan = () => {
                   </motion.div>
                 )}
 
-                {activeTab === "marketing" && (
+                {activeTab === "marketing" && businessPlan.marketing_strategy && (
                   <motion.div
                     key="marketing"
                     initial={{ opacity: 0, x: -20 }}
@@ -540,24 +547,24 @@ const BusinessPlan = () => {
                       <div className="flex items-center justify-between mb-6">
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">Marketing Strategy</h3>
                         <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                          {formatCurrency(businessPlan.marketing_strategy.total_budget)}
+                          {formatCurrency(businessPlan.marketing_strategy?.total_budget || 0)}
                         </div>
                       </div>
                       <div className="space-y-4">
                         <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
                           <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Customer Acquisition</h4>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">{businessPlan.marketing_strategy.customer_acquisition_strategy}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{businessPlan.marketing_strategy?.customer_acquisition_strategy || 'N/A'}</p>
                         </div>
                         <div className="p-4 bg-pink-50 dark:bg-pink-900/20 rounded-xl">
                           <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Retention Strategy</h4>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">{businessPlan.marketing_strategy.retention_strategy}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{businessPlan.marketing_strategy?.retention_strategy || 'N/A'}</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Marketing Channels */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {businessPlan.marketing_strategy.channels.map((channel, index) => (
+                      {(businessPlan.marketing_strategy?.channels || []).map((channel, index) => (
                         <motion.div
                           key={index}
                           initial={{ opacity: 0, y: 20 }}
@@ -588,7 +595,7 @@ const BusinessPlan = () => {
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                       <h4 className="font-bold text-gray-900 dark:text-white mb-4">Growth Tactics</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {businessPlan.marketing_strategy.growth_tactics.map((tactic, i) => (
+                        {(businessPlan.marketing_strategy?.growth_tactics || []).map((tactic, i) => (
                           <div key={i} className="flex items-start space-x-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                             <Sparkles className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
                             <span className="text-sm text-gray-700 dark:text-gray-300">{tactic}</span>
@@ -601,44 +608,46 @@ const BusinessPlan = () => {
               </AnimatePresence>
 
               {/* Investor Summary */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1 }}
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8"
-              >
-                <div className="flex items-center space-x-3 mb-6">
-                  <Briefcase className="w-6 h-6 text-purple-500" />
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Investor Summary</h3>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Elevator Pitch</h4>
-                    <p className="text-gray-700 dark:text-gray-300">{businessPlan.investor_summary.elevator_pitch}</p>
+              {businessPlan.investor_summary && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1 }}
+                  className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8"
+                >
+                  <div className="flex items-center space-x-3 mb-6">
+                    <Briefcase className="w-6 h-6 text-purple-500" />
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Investor Summary</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Problem</h4>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">{businessPlan.investor_summary.problem_statement}</p>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Elevator Pitch</h4>
+                      <p className="text-gray-700 dark:text-gray-300">{businessPlan.investor_summary?.elevator_pitch || 'N/A'}</p>
                     </div>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Solution</h4>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">{businessPlan.investor_summary.solution_overview}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Problem</h4>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{businessPlan.investor_summary?.problem_statement || 'N/A'}</p>
+                      </div>
+                      <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Solution</h4>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{businessPlan.investor_summary?.solution_overview || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Use of Funds</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {(businessPlan.investor_summary?.use_of_funds || []).map((fund, i) => (
+                          <div key={i} className="flex items-center space-x-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                            <CheckCircle className="w-4 h-4 text-purple-500" />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{fund}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Use of Funds</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {businessPlan.investor_summary.use_of_funds.map((fund, i) => (
-                        <div key={i} className="flex items-center space-x-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                          <CheckCircle className="w-4 h-4 text-purple-500" />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{fund}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              )}
 
               {/* Next Steps CTA */}
               <motion.div

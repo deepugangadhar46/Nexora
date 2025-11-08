@@ -36,6 +36,9 @@ export function generateChartUrl(config: ChartConfig): string {
  * Generate a bar chart for validation scores
  */
 export function generateValidationBarChart(scores: any): string {
+  // Log the scores being used for the chart
+  console.log('generateValidationBarChart called with scores:', scores);
+  
   const chartData = {
     labels: ['Feasibility', 'Scalability', 'Market Demand', 'Innovation'],
     datasets: [{
@@ -47,10 +50,10 @@ export function generateValidationBarChart(scores: any): string {
         scores.innovation || 0
       ],
       backgroundColor: [
-        'rgba(59, 130, 246, 0.8)',  // Blue
-        'rgba(34, 197, 94, 0.8)',   // Green
-        'rgba(251, 191, 36, 0.8)',  // Yellow
-        'rgba(168, 85, 247, 0.8)'   // Purple
+        'rgba(59, 130, 246, 0.8)',  // Blue - Feasibility
+        'rgba(34, 197, 94, 0.8)',   // Green - Scalability
+        'rgba(251, 191, 36, 0.8)',  // Yellow - Market Demand
+        'rgba(168, 85, 247, 0.8)'   // Purple - Innovation
       ],
       borderColor: [
         'rgb(59, 130, 246)',
@@ -66,10 +69,39 @@ export function generateValidationBarChart(scores: any): string {
     type: 'bar',
     data: chartData,
     options: {
+      layout: {
+        padding: {
+          top: 30,
+          right: 20,
+          bottom: 10,
+          left: 10
+        }
+      },
       scales: {
         y: {
           beginAtZero: true,
-          max: 100
+          max: 100,
+          ticks: {
+            stepSize: 20,
+            font: {
+              size: 12
+            }
+          },
+          grid: {
+            display: true,
+            color: 'rgba(0, 0, 0, 0.1)'
+          }
+        },
+        x: {
+          ticks: {
+            font: {
+              size: 13,
+              weight: 'bold'
+            }
+          },
+          grid: {
+            display: false
+          }
         }
       },
       plugins: {
@@ -78,12 +110,29 @@ export function generateValidationBarChart(scores: any): string {
         },
         title: {
           display: true,
-          text: 'Validation Scores by Category'
+          text: 'Category Breakdown',
+          font: {
+            size: 18,
+            weight: 'bold'
+          },
+          padding: {
+            bottom: 20
+          }
+        },
+        datalabels: {
+          anchor: 'end',
+          align: 'top',
+          formatter: (value: number) => value,
+          font: {
+            weight: 'bold',
+            size: 14
+          },
+          color: '#000'
         }
       }
     },
-    width: 600,
-    height: 400
+    width: 700,
+    height: 450
   });
 }
 
@@ -114,7 +163,8 @@ export function generateRadarChart(scores: any): string {
       pointBackgroundColor: 'rgb(251, 191, 36)',
       pointBorderColor: '#fff',
       pointHoverBackgroundColor: '#fff',
-      pointHoverBorderColor: 'rgb(251, 191, 36)'
+      pointHoverBorderColor: 'rgb(251, 191, 36)',
+      borderWidth: 3
     }]
   };
 
@@ -130,7 +180,21 @@ export function generateRadarChart(scores: any): string {
       scales: {
         r: {
           angleLines: {
-            display: true
+            display: true,
+            color: 'rgba(0, 0, 0, 0.1)'
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.1)'
+          },
+          pointLabels: {
+            font: {
+              size: 12,
+              weight: 'bold'
+            }
+          },
+          ticks: {
+            stepSize: 20,
+            backdropColor: 'transparent'
           },
           suggestedMin: 0,
           suggestedMax: 100
@@ -138,16 +202,26 @@ export function generateRadarChart(scores: any): string {
       },
       plugins: {
         legend: {
-          display: false
+          display: true,
+          position: 'top',
+          labels: {
+            font: {
+              size: 12
+            }
+          }
         },
         title: {
           display: true,
-          text: 'Comprehensive Score Analysis'
+          text: 'Overall Performance',
+          font: {
+            size: 16,
+            weight: 'bold'
+          }
         }
       }
     },
-    width: 500,
-    height: 500
+    width: 600,
+    height: 600
   });
 }
 

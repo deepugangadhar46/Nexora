@@ -42,11 +42,11 @@ const QuickActions = () => {
     },
     {
       id: "research",
-      label: "Market Research",
+      label: "Marketing Strategy",
       icon: Zap,
       color: "bg-pulse-500 hover:bg-pulse-600",
-      path: "/research",
-      description: "Analyze market and competitors"
+      path: "/marketing-strategy",
+      description: "Market research & marketing plans"
     },
     {
       id: "team",
