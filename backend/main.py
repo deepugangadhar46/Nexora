@@ -543,9 +543,14 @@ async def login_user(request: Request, user_request: UserLoginRequest):
         import hashlib
         
         # Get user
+        logger.info(f"Login attempt for user: {user_request.email}")
         user = db.get_user_by_email(user_request.email)
         if not user:
             logger.warning(f"Login attempt for non-existent user: {user_request.email}")
+            # Check if database is available
+            if not db.connection_pool:
+                logger.error("Database connection not available during login attempt")
+                raise HTTPException(status_code=503, detail="Service temporarily unavailable")
             raise HTTPException(status_code=401, detail="Invalid email or password")
         
         # Verify password

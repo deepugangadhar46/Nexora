@@ -55,15 +55,33 @@ def initialize_pool():
         logger.warning("Database credentials not configured. Running without database.")
         return False
     
+    # If pool already exists and is working, return True
+    if connection_pool is not None:
+        try:
+            # Test the existing pool
+            test_conn = connection_pool.get_connection()
+            test_conn.close()
+            logger.info("Database connection pool already initialized and working")
+            return True
+        except Exception:
+            logger.warning("Existing pool is not working, reinitializing...")
+            connection_pool = None
+    
     try:
         connection_pool = pooling.MySQLConnectionPool(
             **DB_CONFIG,
             **POOL_CONFIG
         )
         logger.info("Database connection pool initialized successfully")
+        
+        # Test the new pool
+        test_conn = connection_pool.get_connection()
+        test_conn.close()
+        logger.info("Database connection pool tested successfully")
         return True
     except Error as e:
         logger.error(f"Error initializing connection pool: {e}")
+        logger.error(f"DB Config: host={DB_CONFIG.get('host')}, user={DB_CONFIG.get('user')}, database={DB_CONFIG.get('database')}")
         connection_pool = None
         return False
 
@@ -108,8 +126,10 @@ def get_db_connection():
 def execute_query(query: str, params: tuple = None, fetch_one: bool = False, fetch_all: bool = True):
     """Execute a database query with SQL injection prevention"""
     if not connection_pool:
-        logger.warning("Database not available - query skipped")
-        return None if (fetch_one or fetch_all) else 0
+        logger.warning("Database not available - attempting to initialize...")
+        if not initialize_pool():
+            logger.error("Failed to initialize database connection")
+            return None if (fetch_one or fetch_all) else 0
     
     with get_db_connection() as conn:
         cursor = conn.cursor(dictionary=True)
@@ -144,19 +164,26 @@ def create_indexes():
         return False
     
     indexes = [
-        "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
-        "CREATE INDEX IF NOT EXISTS idx_projects_user_created ON projects(user_id, created_at DESC)",
-        "CREATE INDEX IF NOT EXISTS idx_generations_user_type ON generations(user_id, type, created_at DESC)",
-        "CREATE INDEX IF NOT EXISTS idx_activities_user_created ON activities(user_id, created_at DESC)",
+        "CREATE INDEX idx_users_email_extra ON users(email)",
+        "CREATE INDEX idx_projects_user_created ON projects(user_id, created_at DESC)",
+        "CREATE INDEX idx_generations_user_type ON generations(user_id, type, created_at DESC)",
+        "CREATE INDEX idx_activities_user_created ON activities(user_id, created_at DESC)",
     ]
     
     with get_db_connection() as conn:
         cursor = conn.cursor()
         try:
             for index_sql in indexes:
-                cursor.execute(index_sql)
+                try:
+                    cursor.execute(index_sql)
+                    logger.info(f"Index created: {index_sql.split()[2]}")
+                except Error as e:
+                    if e.errno == 1061:  # Duplicate key name
+                        logger.info(f"Index already exists: {index_sql.split()[2]}")
+                    else:
+                        logger.warning(f"Error creating index: {e}")
             conn.commit()
-            logger.info("Database indexes created successfully")
+            logger.info("Database indexes processed successfully")
             return True
         except Error as e:
             logger.error(f"Error creating indexes: {e}")
@@ -328,12 +355,21 @@ def create_user(user_id: str, email: str, name: str, password_hash: str) -> bool
 
 def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
     """Get user by email"""
+    if not email:
+        logger.warning("Empty email provided to get_user_by_email")
+        return None
+        
     query = "SELECT * FROM users WHERE email = %s"
     try:
-        result = execute_query(query, (email,), fetch_one=True)
+        logger.debug(f"Looking up user by email: {email}")
+        result = execute_query(query, (email.lower().strip(),), fetch_one=True)
+        if result:
+            logger.debug(f"User found: {email}")
+        else:
+            logger.debug(f"No user found for email: {email}")
         return result
     except Error as e:
-        logger.error(f"Error getting user: {e}")
+        logger.error(f"Error getting user by email {email}: {e}")
         return None
 
 
@@ -363,6 +399,12 @@ def update_user_credits(user_id: str, credits: int) -> bool:
         logger.error(f"Error updating credits: {e}")
         return False
 
+
+# Initialize connection pool on module import
+try:
+    initialize_pool()
+except Exception as e:
+    logger.warning(f"Failed to initialize database pool on import: {e}")
 
 # Initialize on module import
 if __name__ == "__main__":

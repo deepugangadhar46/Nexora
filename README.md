@@ -1,22 +1,16 @@
-# Welcome to your Lovable project
+# Nexora - AI-Powered Business Development Platform
 
-## Project info
+## Project Overview
 
-**URL**: https://lovable.dev/projects/35d72d2e-6e25-40e5-9b0c-c0d1a7c1b727
+Nexora is an innovative AI-powered platform designed to help entrepreneurs and businesses with idea validation, business planning, MVP development, and market strategy.
 
 ## How can I edit this code?
 
 There are several ways of editing your application.
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/35d72d2e-6e25-40e5-9b0c-c0d1a7c1b727) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
 **Use your preferred IDE**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Clone this repository and work locally using your preferred development environment.
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
@@ -24,10 +18,10 @@ Follow these steps:
 
 ```sh
 # Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+git clone https://github.com/deepugangadhar46/Nexora.git
 
 # Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+cd Nexora
 
 # Step 3: Install the necessary dependencies.
 npm i
@@ -52,18 +46,44 @@ npm run dev
 
 ## What technologies are used for this project?
 
-This project is built with .
+This project is built with modern web technologies:
 
+**Frontend:**
 - Vite
 - TypeScript
 - React
 - shadcn-ui
 - Tailwind CSS
 
+**Backend:**
+- Python
+- FastAPI
+
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/35d72d2e-6e25-40e5-9b0c-c0d1a7c1b727) and click on Share -> Publish.
+**Frontend Deployment:**
+- Build the project: `npm run build`
+- Deploy to Netlify, Vercel, or any static hosting service
 
-## I want to use a custom domain - is that possible?
+**Backend Deployment:**
+- Deploy the Python backend to services like Railway, Render, or AWS
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+## Features
+
+- **Idea Validation**: AI-powered market research and validation tools
+- **Business Planning**: Automated business plan generation
+- **MVP Builder**: Rapid prototype development
+- **Market Strategy**: Data-driven marketing insights
+- **Pitch Deck Creation**: Professional presentation generation
+- **Team Collaboration**: Multi-user workspace support
+
+## Getting Started
+
+1. Clone the repository
+2. Install dependencies for both frontend and backend
+3. Set up environment variables
+4. Run the development servers
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines and submit pull requests for any improvements.
