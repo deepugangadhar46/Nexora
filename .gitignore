@@ -1,83 +1,32 @@
-# Environment variables
+# Environment variables - CRITICAL: Never commit these!
 .env
 .env.local
+.env.*.local
 .env.production
 .env.development
-
-# Keep the example file
 !.env.example
 
-# Dependencies
-node_modules/
-venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Build outputs
-dist/
-build/
-*.egg-info/
-.eggs/
-frontend/dist/
-frontend/build/
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
 # Logs
-logs/
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Testing
-coverage/
-.coverage
-htmlcov/
-.pytest_cache/
-.tox/
+node_modules
+dist
+dist-ssr
+*.local
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-*.bak
-
-# Reports
-backend/reports/*.pdf
-backend/reports/*.docx
-backend/reports/*.pptx
-
-# Uploaded files
-uploads/
-media/
-
-# OS files
-Thumbs.db
-Desktop.ini
-
-# Python virtual environment
-env/
-ENV/
-
-# Package lock files (keep one)
-package-lock.json
-yarn.lock
-# Keep bun.lockb if using Bun
-!bun.lockb
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

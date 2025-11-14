@@ -199,7 +199,7 @@ const Hero = memo(() => {
                 />
               </span>
               <br />
-              <span className="text-gray-700 dark:text-gray-300">in Minutes, Not Months</span>
+              <span className="text-gray-700 dark:text-gray-300">in Minutes</span>
             </motion.h1>
             
             <motion.p 
