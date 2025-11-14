@@ -19,6 +19,21 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Password strength checker
+  const getPasswordStrength = (password: string) => {
+    const checks = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /\d/.test(password)
+    };
+    
+    const score = Object.values(checks).filter(Boolean).length;
+    return { checks, score };
+  };
+
+  const passwordStrength = getPasswordStrength(formData.password);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -31,8 +46,27 @@ const Register = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters long");
+    // Enhanced password validation to match backend
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!/[A-Z]/.test(formData.password)) {
+      setError("Password must contain at least one uppercase letter");
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!/[a-z]/.test(formData.password)) {
+      setError("Password must contain at least one lowercase letter");
+      setIsLoading(false);
+      return;
+    }
+    
+    if (!/\d/.test(formData.password)) {
+      setError("Password must contain at least one number");
       setIsLoading(false);
       return;
     }
@@ -171,14 +205,86 @@ const Register = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Password
                 </label>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-pulse-500 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500"
-                  placeholder="Create a password"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-pulse-500 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500"
+                    placeholder="Create a password (8+ chars, uppercase, lowercase, number)"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {/* Password Strength Indicator */}
+                {formData.password && (
+                  <div className="mt-2">
+                    <div className="flex space-x-1 mb-2">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div
+                          key={i}
+                          className={`h-1 flex-1 rounded ${i <= passwordStrength.score
+                            ? passwordStrength.score === 1
+                              ? "bg-red-500"
+                              : passwordStrength.score === 2
+                              ? "bg-yellow-500"
+                              : passwordStrength.score === 3
+                              ? "bg-blue-500"
+                              : "bg-green-500"
+                            : "bg-gray-200 dark:bg-gray-600"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <div className="text-xs space-y-1">
+                      <div className={`flex items-center space-x-1 ${passwordStrength.checks.length ? "text-green-600" : "text-gray-400"}`}>
+                        <span>{passwordStrength.checks.length ? "✓" : "○"}</span>
+                        <span>At least 8 characters</span>
+                      </div>
+                      <div className={`flex items-center space-x-1 ${passwordStrength.checks.uppercase ? "text-green-600" : "text-gray-400"}`}>
+                        <span>{passwordStrength.checks.uppercase ? "✓" : "○"}</span>
+                        <span>One uppercase letter</span>
+                      </div>
+                      <div className={`flex items-center space-x-1 ${passwordStrength.checks.lowercase ? "text-green-600" : "text-gray-400"}`}>
+                        <span>{passwordStrength.checks.lowercase ? "✓" : "○"}</span>
+                        <span>One lowercase letter</span>
+                      </div>
+                      <div className={`flex items-center space-x-1 ${passwordStrength.checks.number ? "text-green-600" : "text-gray-400"}`}>
+                        <span>{passwordStrength.checks.number ? "✓" : "○"}</span>
+                        <span>One number</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-pulse-500 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500"
+                    placeholder="Confirm your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-start">
@@ -286,10 +392,10 @@ const deck = await generatePitchDeck({
             </p>
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-gradient-to-r from-pulse-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                GT
+                D
               </div>
               <div>
-                <p className="font-semibold text-gray-900 dark:text-white">Garry Tan, CEO & President</p>
+                <p className="font-semibold text-gray-900 dark:text-white">Deepu, CEO & President</p>
                 <div className="flex items-center space-x-1">
                   <span className="text-orange-500 font-bold">Y</span>
                   <span className="text-gray-600 dark:text-gray-400 text-sm">Combinator</span>

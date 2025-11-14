@@ -257,10 +257,10 @@ console.log(result);
             </p>
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-gradient-to-r from-pulse-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                ST
+                D
               </div>
               <div>
-                <p className="font-semibold text-gray-900 dark:text-white">Garry Tan, CEO & President</p>
+                <p className="font-semibold text-gray-900 dark:text-white">Deepu, CEO & President</p>
                 <div className="flex items-center space-x-1">
                   <span className="text-orange-500 font-bold">Y</span>
                   <span className="text-gray-600 dark:text-gray-400 text-sm">Combinator</span>
