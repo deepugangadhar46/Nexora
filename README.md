@@ -1,4 +1,4 @@
-# Nexora - AI-Powered Business Development Platform
+# Nexora - AI-Powered Startup Development Platform
 
 ## Project Overview
 
@@ -18,7 +18,7 @@ Follow these steps:
 
 ```sh
 # Step 1: Clone the repository using the project's Git URL.
-git clone https://github.com/deepugangadhar46/Nexora.git
+git clone https://github.com/deepspsd/Nexora.git
 
 # Step 2: Navigate to the project directory.
 cd Nexora
