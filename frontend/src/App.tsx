@@ -19,11 +19,11 @@ const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MVPBuilder = lazy(() => import("./pages/MVPBuilder"));
-const BusinessPlan = lazy(() => import("./pages/BusinessPlan"));
 const IdeaValidation = lazy(() => import("./pages/IdeaValidation"));
 const MarketingStrategy = lazy(() => import("./pages/MarketingStrategy"));
 const TeamCollaboration = lazy(() => import("./pages/TeamCollaboration"));
 const PitchDeck = lazy(() => import("./pages/PitchDeck"));
+const Branding = lazy(() => import("./pages/Branding"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const About = lazy(() => import("./pages/About"));
@@ -175,14 +175,6 @@ const App = () => {
                 } 
               />
               <Route 
-                path="/business-plan" 
-                element={
-                  <ProtectedRoute>
-                    <BusinessPlan />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
                 path="/marketing-strategy" 
                 element={
                   <ProtectedRoute>
@@ -220,6 +212,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <PitchDeck />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/branding" 
+                element={
+                  <ProtectedRoute>
+                    <Branding />
                   </ProtectedRoute>
                 } 
               />

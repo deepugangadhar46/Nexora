@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Zap, Lightbulb, FileText, Rocket, Users, Presentation } from "lucide-react";
+import { Plus, Zap, Lightbulb, Palette, Rocket, Users, Presentation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
@@ -25,12 +25,12 @@ const QuickActions = () => {
       description: "Generate a complete MVP"
     },
     {
-      id: "business-plan",
-      label: "Business Plan",
-      icon: FileText,
-      color: "bg-green-500 hover:bg-green-600",
-      path: "/business-plan",
-      description: "Create comprehensive business plan"
+      id: "branding",
+      label: "Branding",
+      icon: Palette,
+      color: "bg-purple-500 hover:bg-purple-600",
+      path: "/branding",
+      description: "Create professional logos with AI"
     },
     {
       id: "pitch-deck",

@@ -152,15 +152,21 @@ class PitchDeckResponse:
 # ============================================================================
 
 class GroqClient:
-    """Groq API client for Llama models"""
+    """Groq API client for Llama models with rate limiting"""
     
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         self.base_url = "https://api.groq.com/openai/v1/chat/completions"
-        self.model = "llama-3.3-70b-versatile"  # Default model
+        # Use a concrete Groq-supported Llama model by default
+        # You can still override via GROQ_MODEL if needed.
+        self.model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+        self.last_request_time = 0
+        self.min_request_interval = 2.0  # Minimum 2 seconds between requests
         
         if not self.api_key:
             raise ValueError("GROQ_API_KEY not found in environment variables")
+        
+        logger.info(f"GroqClient initialized with model: {self.model} (rate limited)")
     
     async def generate(
         self,
@@ -169,9 +175,10 @@ class GroqClient:
         temperature: float = 0.7,
         max_tokens: int = 4000,
         json_mode: bool = False,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        max_retries: int = 5
     ) -> str:
-        """Generate response using Groq"""
+        """Generate response using Groq with exponential backoff retry"""
         
         messages = []
         if system_prompt:
@@ -188,32 +195,142 @@ class GroqClient:
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
-            "top_p": 0.95,  # Nucleus sampling for better quality
-            "frequency_penalty": 0.1,  # Reduce repetition
-            "presence_penalty": 0.1  # Encourage diverse content
+            "top_p": 0.95,
+            "frequency_penalty": 0.1,
+            "presence_penalty": 0.1
         }
         
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
         
+        retry_count = 0
+        base_delay = 2.0
+        
+        while retry_count <= max_retries:
+            try:
+                # Rate limiting: ensure minimum interval between requests
+                import time
+                current_time = time.time()
+                time_since_last = current_time - self.last_request_time
+                if time_since_last < self.min_request_interval:
+                    wait_time = self.min_request_interval - time_since_last
+                    logger.info(f"Rate limiting: waiting {wait_time:.1f}s before request")
+                    await asyncio.sleep(wait_time)
+                
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        self.base_url,
+                        json=payload,
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=60)
+                    ) as response:
+                        self.last_request_time = time.time()
+                        
+                        if response.status == 429:  # Rate limit error
+                            retry_count += 1
+                            if retry_count > max_retries:
+                                error_text = await response.text()
+                                raise Exception(f"Rate limit exceeded after {max_retries} retries. Please wait 60-90 seconds and try again. Error: {error_text}")
+                            
+                            # Exponential backoff: 2s, 4s, 8s, 16s, 32s
+                            wait_time = base_delay * (2 ** retry_count)
+                            logger.warning(f"Rate limit hit. Retry {retry_count}/{max_retries} after {wait_time}s...")
+                            await asyncio.sleep(wait_time)
+                            continue
+                        
+                        if response.status != 200:
+                            error_text = await response.text()
+                            logger.error(f"Groq API error: {error_text}")
+                            raise Exception(f"Groq API error ({response.status}): {error_text}")
+                        
+                        data = await response.json()
+                        return data["choices"][0]["message"]["content"]
+                        
+            except asyncio.TimeoutError:
+                retry_count += 1
+                if retry_count > max_retries:
+                    raise Exception(f"Request timeout after {max_retries} retries")
+                wait_time = base_delay * retry_count
+                logger.warning(f"Timeout. Retry {retry_count}/{max_retries} after {wait_time}s...")
+                await asyncio.sleep(wait_time)
+                
+            except Exception as e:
+                if "rate limit" in str(e).lower() or "429" in str(e):
+                    retry_count += 1
+                    if retry_count > max_retries:
+                        raise Exception(f"Rate limit exceeded. Please wait 60-90 seconds and try again. The free Groq API has a limit of 12,000 tokens per minute.")
+                    wait_time = base_delay * (2 ** retry_count)
+                    logger.warning(f"Rate limit error. Retry {retry_count}/{max_retries} after {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error(f"Error calling Groq API: {str(e)}")
+                    raise
+        
+        raise Exception("Maximum retries exceeded")
+
+
+class MoonshotClient:
+    """Moonshot (Kimi) API client, OpenAI-compatible chat endpoint"""
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.getenv("MOONSHOT_API_KEY")
+        self.base_url = "https://api.moonshot.ai/v1/chat/completions"
+        # Default Kimi model; adjust to the latest recommended model if needed
+        self.model = os.getenv("MOONSHOT_MODEL", "kimi-k2-0711-preview")
+
+        if not self.api_key:
+            raise ValueError("MOONSHOT_API_KEY not found in environment variables")
+
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4000,
+        json_mode: bool = False,
+        model: Optional[str] = None
+    ) -> str:
+        """Generate response using Moonshot chat completions"""
+
+        messages: List[Dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        payload: Dict[str, Any] = {
+            "model": model or self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+
+        if json_mode:
+            # Moonshot is OpenAI-compatible; use response_format if supported
+            payload["response_format"] = {"type": "json_object"}
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     self.base_url,
                     json=payload,
                     headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=60)
+                    timeout=aiohttp.ClientTimeout(total=60),
                 ) as response:
                     if response.status != 200:
                         error_text = await response.text()
-                        logger.error(f"Groq API error: {error_text}")
-                        raise Exception(f"Groq API error: {response.status}")
-                    
+                        logger.error(f"Moonshot API error: {error_text}")
+                        raise Exception(f"Moonshot API error: {response.status}")
+
                     data = await response.json()
                     return data["choices"][0]["message"]["content"]
-        
+
         except Exception as e:
-            logger.error(f"Error calling Groq API: {str(e)}")
+            logger.error(f"Error calling Moonshot API: {str(e)}")
             raise
 
 
@@ -363,6 +480,8 @@ class PitchDeckAgent:
     ):
         """Initialize the Pitch Deck Agent"""
         
+        # Always use Groq client for Llama models
+        logger.info("Initializing PitchDeckAgent with Groq client")
         self.groq = GroqClient(groq_api_key)
         self.elevenlabs = ElevenLabsClient(elevenlabs_api_key)
         self.quickchart = QuickChartClient()
@@ -380,49 +499,62 @@ class PitchDeckAgent:
         target_market: str = "",
         funding_ask: float = 0
     ) -> PitchDeckSlides:
-        """
-        Generate up to 12 slides (Problem → Solution → Market → Team → Ask)
+        """Generate structured slide content for the pitch deck.
+
+        This uses the LLM to create 12 slides with clear titles and
+        30 concise, investor-focused bullet points per slide.
         """
         
-        system_prompt = """You are a pitch deck expert who has helped hundreds of startups raise funding.
-Generate compelling content for a 12-slide investor pitch deck.
+        system_prompt = """You are a world-class startup pitch deck expert.
+Generate a structured, investor-ready 12-slide pitch deck.
 
-The deck should follow this structure:
-1. Title Slide - Company name, tagline, founder info
-2. Problem - The pain point you're solving
-3. Solution - Your product/service
-4. Market Opportunity - TAM, SAM, SOM
-5. Product - Key features and demo
-6. Business Model - How you make money
-7. Traction - Metrics, milestones, achievements
-8. Competition - Competitive landscape
-9. Team - Founders and key team members
-10. Financials - Revenue projections, unit economics
-11. The Ask - Funding amount and use of funds
-12. Closing - Vision and call to action
+The deck MUST follow this exact structure and order:
+1. Title Slide - Company name, one-line tagline, what you do
+2. Problem - 23 concrete pain points and who experiences them
+3. Solution - Product/service overview and how it solves the problem
+4. Market Opportunity - TAM / SAM / SOM and market context
+5. Product - Key features and how users interact with it
+6. Business Model - How you make money (pricing, revenue streams)
+7. Traction & Metrics - Growth, users, revenue, key milestones
+8. Competition - Competitors and your differentiation/moat
+9. Team - Founders, roles, and relevant experience
+10. Financials - High-level 35 year projections and unit economics
+11. The Ask & Use of Funds - How much you are raising and where it goes
+12. Closing / Vision - Long-term vision and call to action
 
-Return ONLY valid JSON with this structure:
+Write content that is specific to the business described by the user.
+Avoid generic phrases like "innovative solution" or "cutting-edge platform".
+Use 36 concise bullet points per slide that an investor can read quickly.
+
+Return ONLY valid JSON with this structure (no extra text):
 {
   "slides": [
     {
       "slide_number": 1,
       "title": "Slide Title",
-      "content": ["bullet point 1", "bullet point 2"],
+      "content": ["bullet point 1", "bullet point 2", "bullet point 3"],
       "notes": "Speaker notes for this slide"
     }
   ]
 }"""
 
-        user_prompt = f"""Create a complete 12-slide pitch deck for this business:
+        funding_ask_str = f"${funding_ask:,.0f}" if funding_ask and funding_ask > 0 else "Not specified"
+
+        user_prompt = f"""Create a complete 12-slide pitch deck for this business.
 
 BUSINESS IDEA: {business_idea}
 BUSINESS NAME: {business_name or "Not specified"}
 TARGET MARKET: {target_market or "Not specified"}
-FUNDING ASK: ${funding_ask:,.0f} if funding_ask > 0 else "Not specified"
+FUNDING ASK: {funding_ask_str}
 
-Generate compelling, investor-ready content for all 12 slides.
-Make it concise, impactful, and data-driven where possible.
-Return as JSON."""
+Requirements:
+- Follow exactly the 12-slide structure defined in the system prompt.
+- Each slide must have a clear, specific title.
+- Each slide's "content" must be a list of 36 short, punchy bullet points.
+- Make the content concrete, investor-focused, and easy to present.
+- Where possible, include simple numbers or examples instead of vague claims.
+
+Return ONLY valid JSON matching the specified schema."""
 
         try:
             response = await self.groq.generate(
@@ -432,12 +564,12 @@ Return as JSON."""
                 json_mode=True,
                 max_tokens=4000
             )
-            
+
             data = json.loads(response)
             slides_data = data.get("slides", [])
-            
+
             # Parse slides into structured format
-            slides_dict = {}
+            slides_dict: Dict[int, SlideContent] = {}
             for slide in slides_data:
                 slides_dict[slide["slide_number"]] = SlideContent(
                     slide_number=slide["slide_number"],
@@ -445,7 +577,32 @@ Return as JSON."""
                     content=slide["content"],
                     notes=slide.get("notes", "")
                 )
-            
+
+            # Ensure title slide is always customized with business name & idea
+            title_slide = slides_dict.get(1)
+            if not title_slide:
+                # Create a title slide if the model failed to return one
+                tagline = business_idea.split(".\n")[0].split(".")[0].strip()
+                if not tagline:
+                    tagline = business_idea[:120].strip()
+                slides_dict[1] = SlideContent(
+                    slide_number=1,
+                    title=business_name or "Your Company",
+                    content=[tagline] if tagline else ["AI-powered startup"],
+                    notes="Auto-generated title slide based on business idea."
+                )
+            else:
+                # Inject business name into the title if missing
+                if business_name and business_name not in title_slide.title:
+                    title_slide.title = business_name
+                # Ensure first bullet acts as a tagline based on the idea
+                if not title_slide.content:
+                    tagline = business_idea.split(".\n")[0].split(".")[0].strip()
+                    if not tagline:
+                        tagline = business_idea[:120].strip()
+                    title_slide.content = [tagline] if tagline else ["AI-powered startup"]
+                slides_dict[1] = title_slide
+
             return PitchDeckSlides(
                 title_slide=slides_dict.get(1, self._default_slide(1, "Title")),
                 problem_slide=slides_dict.get(2, self._default_slide(2, "Problem")),
@@ -850,7 +1007,6 @@ Return as JSON."""
                 temperature=0.6,
                 json_mode=True,
                 max_tokens=3000,
-                model="llama-3.3-70b-versatile"  # Llama for reasoning
             )
             
             data = json.loads(response)
@@ -950,10 +1106,9 @@ Return as JSON."""
         if PPTX_AVAILABLE:
             try:
                 logger.info("Exporting to PPTX...")
-                pptx_filename = f"pitch_deck_{deck_id}.pptx"
-                pptx_path = await self.export_to_pptx(response, pptx_filename)
-                response.pptx_url = pptx_path
-                logger.info(f"PPTX exported: {pptx_path}")
+                pptx_bytes = await self.export_to_pptx(response)
+                # Removed pptx_bytes from response
+                logger.info("PPTX exported successfully")
             except Exception as e:
                 logger.warning(f"PPTX export failed: {str(e)}")
         
@@ -1032,8 +1187,7 @@ Return as JSON."""
     async def export_to_pptx(
         self,
         deck: PitchDeckResponse,
-        output_path: str = "pitch_deck.pptx"
-    ) -> str:
+    ) -> bytes:
         """
         Export pitch deck to PowerPoint format
         """
@@ -1092,11 +1246,13 @@ Return as JSON."""
                     if slide_content.chart_data and slide_content.chart_type:
                         await self._add_chart_to_slide(slide, slide_content)
             
-            # Save presentation
-            prs.save(output_path)
-            logger.info(f"PPTX exported successfully to: {output_path}")
+            # Save presentation to bytes in memory
+            buffer = BytesIO()
+            prs.save(buffer)
+            buffer.seek(0)
+            logger.info("PPTX exported successfully")
             
-            return output_path
+            return buffer.getvalue()
         
         except Exception as e:
             logger.error(f"Error exporting to PPTX: {str(e)}")

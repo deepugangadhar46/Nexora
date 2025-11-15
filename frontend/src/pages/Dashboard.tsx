@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { 
   Lightbulb, 
   TrendingUp, 
-  FileText, 
+  Palette, 
   Rocket, 
   Users, 
   ArrowRight,
@@ -71,12 +71,12 @@ const Dashboard = () => {
       tourId: "marketing-strategy"
     },
     {
-      title: "Business Plan",
-      description: "Generate detailed business plans with financial projections", 
-      icon: FileText,
-      path: "/business-plan",
+      title: "Branding",
+      description: "Create professional logos with AI-powered design generation", 
+      icon: Palette,
+      path: "/branding",
       gradient: "from-purple-500 to-pink-600",
-      stats: "1 plan created"
+      stats: "Ready to design"
     },
     {
       title: "MVP Development",

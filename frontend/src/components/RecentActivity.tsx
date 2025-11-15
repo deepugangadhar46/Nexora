@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Clock, FileText, Rocket, Lightbulb, Users, Presentation, Download, Eye, Share2 } from "lucide-react";
+import { Clock, Palette, Rocket, Lightbulb, Users, Presentation, Download, Eye, Share2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
 interface Activity {
   id: string;
-  type: 'idea-validation' | 'mvp-generation' | 'business-plan' | 'pitch-deck' | 'research' | 'team-invite';
+  type: 'idea-validation' | 'mvp-generation' | 'branding' | 'pitch-deck' | 'research' | 'team-invite';
   title: string;
   description: string;
   timestamp: Date;
@@ -36,14 +36,14 @@ const RecentActivity = () => {
     },
     {
       id: '2',
-      type: 'business-plan',
-      title: 'Business Plan Created',
-      description: 'Comprehensive plan with financial projections',
+      type: 'branding',
+      title: 'Logo Created',
+      description: 'Professional logo generated with AI',
       timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
       status: 'completed',
       metadata: {
         projectName: 'ShopEasy',
-        fileSize: '1.8 MB'
+        fileSize: '0.8 MB'
       }
     },
     {
@@ -88,8 +88,8 @@ const RecentActivity = () => {
         return <Lightbulb className="w-4 h-4" />;
       case 'mvp-generation':
         return <Rocket className="w-4 h-4" />;
-      case 'business-plan':
-        return <FileText className="w-4 h-4" />;
+      case 'branding':
+        return <Palette className="w-4 h-4" />;
       case 'pitch-deck':
         return <Presentation className="w-4 h-4" />;
       case 'research':
@@ -107,8 +107,8 @@ const RecentActivity = () => {
         return 'bg-yellow-100 text-yellow-600 border-yellow-200';
       case 'mvp-generation':
         return 'bg-purple-100 text-purple-600 border-purple-200';
-      case 'business-plan':
-        return 'bg-green-100 text-green-600 border-green-200';
+      case 'branding':
+        return 'bg-purple-100 text-purple-600 border-purple-200';
       case 'pitch-deck':
         return 'bg-blue-100 text-blue-600 border-blue-200';
       case 'research':
@@ -142,8 +142,8 @@ const RecentActivity = () => {
       case 'mvp-generation':
         navigate('/mvp-development');
         break;
-      case 'business-plan':
-        navigate('/business-plan');
+      case 'branding':
+        navigate('/branding');
         break;
       case 'pitch-deck':
         navigate('/pitch-deck');

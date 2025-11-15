@@ -76,14 +76,15 @@ from prompt_templates_html import (
 from idea_validation_agent import IdeaValidationAgent
 from idea_validation_api import router as idea_validation_router
 
-# Import Business Planning Agent
-from business_planning_agent import BusinessPlanningAgent, BusinessPlanResponse, router as business_planning_router
 
 # Import Market Research Agent
 from market_research_agent import MarketResearchAgent
 
 # Import Pitch Deck Agent
 from pitch_deck_agent import PitchDeckAgent
+
+# Import Branding Agent
+from branding_agent import BrandingAgent
 
 # Import Cache
 from cache import cache, cached, cache_ai_response, get_cached_ai_response
@@ -137,9 +138,9 @@ subscription_manager = None
 
 # Initialize agents
 idea_validation_agent = None
-business_planning_agent = None
 market_research_agent = None
 pitch_deck_agent = None
+branding_agent = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -168,7 +169,7 @@ async def lifespan(app: FastAPI):
     subscription_manager = SubscriptionManager(db)
     logger.info("Subscription manager initialized")
     
-    global mvp_builder_agent, idea_validation_agent, business_planning_agent, market_research_agent, pitch_deck_agent
+    global mvp_builder_agent, idea_validation_agent, market_research_agent, pitch_deck_agent, branding_agent
     
     try:
         mvp_builder_agent = MVPBuilderAgent()
@@ -182,11 +183,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to initialize Idea Validation Agent: {str(e)}")
     
-    try:
-        business_planning_agent = BusinessPlanningAgent()
-        logger.info("✓ Business Planning Agent initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize Business Planning Agent: {str(e)}")
     
     try:
         market_research_agent = MarketResearchAgent()
@@ -200,13 +196,19 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to initialize Pitch Deck Agent: {str(e)}")
     
+    try:
+        branding_agent = BrandingAgent()
+        logger.info("✓ Branding Agent initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize Branding Agent: {str(e)}")
+    
     # Set agents for API v1
     set_agents(
         mvp_builder_agent,
         idea_validation_agent,
-        business_planning_agent,
         market_research_agent,
-        pitch_deck_agent
+        pitch_deck_agent,
+        branding_agent
     )
     logger.info("✓ API v1 agents configured")
     
@@ -256,7 +258,6 @@ app.add_middleware(
 # Include routers
 app.include_router(api_v1_router)
 app.include_router(idea_validation_router)
-app.include_router(business_planning_router)
 
 # ============================================================================
 # REQUEST/RESPONSE MODELS
@@ -1692,7 +1693,6 @@ async def execute_code(request: ExecuteCodeRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Business Planning endpoints are now handled by the business_planning_router
 
 
 # ============================================================================
@@ -1977,166 +1977,155 @@ async def market_research_health():
     }
 
 
+
+
 # ============================================================================
-# BUSINESS PLANNING ADDITIONAL ENDPOINTS
+# BRANDING API ENDPOINTS
 # ============================================================================
 
-# Request Model for Business Planning
-class BusinessPlanningRequest(BaseModel):
-    """Business planning request model"""
-    idea: str = Field(default="", description="Business idea")
-    target_market: str = Field(default="", description="Target market")
-    industry: str = Field(default="", description="Industry")
-    business_model: str = Field(default="", description="Business model")
+# Request Models for Branding
+class LogoGenerationRequest(BaseModel):
+    """Logo generation request model"""
+    company_name: str = Field(..., description="Company name")
+    idea: str = Field(..., description="Business idea or description")
+    style: str = Field(default="modern", description="Logo style")
+    colors: str = Field(default="professional", description="Color scheme")
+    shape: str = Field(default="square", description="Logo shape")
 
-@app.post("/api/business-plan/lean-canvas")
-async def generate_lean_canvas(
-    request: BusinessPlanningRequest,
+class CustomLogoRequest(BaseModel):
+    """Custom logo generation request model"""
+    company_name: str = Field(..., description="Company name")
+    custom_prompt: str = Field(..., description="Custom prompt for logo generation")
+
+@app.post("/api/branding/generate-logo")
+async def generate_logo(
+    request: LogoGenerationRequest,
     token: Optional[str] = Depends(verify_token)
 ):
-    """Generate Lean Canvas for business idea"""
+    """Generate a logo based on company name and idea"""
     try:
-        if not business_planning_agent:
-            raise HTTPException(status_code=503, detail="Business Planning Agent not initialized")
+        if not branding_agent:
+            raise HTTPException(status_code=503, detail="Branding Agent not initialized")
         
-        data = request.dict()
-        lean_canvas = await business_planning_agent.generate_lean_canvas(
-            idea=data.get("idea", ""),
-            target_market=data.get("target_market", ""),
-            business_model=data.get("business_model", "")
+        from branding_agent import LogoRequest
+        
+        logo_request = LogoRequest(
+            company_name=request.company_name,
+            idea=request.idea,
+            style=request.style,
+            colors=request.colors,
+            shape=request.shape  # Include shape parameter
         )
         
-        from dataclasses import asdict
+        result = await branding_agent.generate_logo(logo_request)
+        
         return {
             "status": "success",
-            "data": asdict(lean_canvas)
+            "data": {
+                "logo_id": result.logo_id,
+                "company_name": result.company_name,
+                "prompt_used": result.prompt_used,
+                "image_base64": result.image_base64,
+                "created_at": result.created_at,
+                "style": result.style,
+                "colors": result.colors,
+                "shape": result.shape  # Include shape in response
+            }
         }
     
     except Exception as e:
-        logger.error(f"Error generating lean canvas: {str(e)}")
+        logger.error(f"Error generating logo: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.post("/api/business-plan/financials")
-async def estimate_financials(
-    request: BusinessPlanningRequest,
+@app.post("/api/branding/generate-custom-logo")
+async def generate_custom_logo(
+    request: CustomLogoRequest,
     token: Optional[str] = Depends(verify_token)
 ):
-    """Estimate financial projections"""
+    """Generate a logo with custom user prompt"""
     try:
-        if not business_planning_agent:
-            raise HTTPException(status_code=503, detail="Business Planning Agent not initialized")
+        if not branding_agent:
+            raise HTTPException(status_code=503, detail="Branding Agent not initialized")
         
-        data = request.dict()
-        financials = await business_planning_agent.estimate_financials(
-            idea=data.get("idea", ""),
-            business_model=data.get("business_model", ""),
-            target_market_size=data.get("target_market_size", "")
+        result = await branding_agent.generate_custom_logo(
+            company_name=request.company_name,
+            custom_prompt=request.custom_prompt
         )
         
-        from dataclasses import asdict
         return {
             "status": "success",
-            "data": asdict(financials)
+            "data": {
+                "logo_id": result.logo_id,
+                "company_name": result.company_name,
+                "prompt_used": result.prompt_used,
+                "image_base64": result.image_base64,
+                "created_at": result.created_at,
+                "style": result.style,
+                "colors": result.colors,
+                "shape": result.shape
+            }
         }
     
     except Exception as e:
-        logger.error(f"Error estimating financials: {str(e)}")
+        logger.error(f"Error generating custom logo: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.post("/api/business-plan/team")
-async def map_team_roles(
-    request: BusinessPlanningRequest,
-    token: Optional[str] = Depends(verify_token)
-):
-    """Map team roles and composition"""
+@app.get("/api/branding/style-options")
+async def get_style_options():
+    """Get available logo style options"""
     try:
-        if not business_planning_agent:
-            raise HTTPException(status_code=503, detail="Business Planning Agent not initialized")
+        if not branding_agent:
+            raise HTTPException(status_code=503, detail="Branding Agent not initialized")
         
-        data = request.dict()
-        team = await business_planning_agent.map_team_roles(
-            idea=data.get("idea", ""),
-            business_model=data.get("business_model", ""),
-            stage=data.get("stage", "pre-seed")
-        )
-        
-        from dataclasses import asdict
+        styles = branding_agent.get_style_options()
         return {
             "status": "success",
-            "data": asdict(team)
+            "data": styles
         }
     
     except Exception as e:
-        logger.error(f"Error mapping team roles: {str(e)}")
+        logger.error(f"Error getting style options: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.post("/api/business-plan/marketing")
-async def build_marketing_strategy(
-    request: BusinessPlanningRequest,
-    token: Optional[str] = Depends(verify_token)
-):
-    """Build marketing strategy"""
+@app.get("/api/branding/color-options")
+async def get_color_options():
+    """Get available logo color options"""
     try:
-        if not business_planning_agent:
-            raise HTTPException(status_code=503, detail="Business Planning Agent not initialized")
+        if not branding_agent:
+            raise HTTPException(status_code=503, detail="Branding Agent not initialized")
         
-        data = request.dict()
-        marketing = await business_planning_agent.build_marketing_strategy(
-            idea=data.get("idea", ""),
-            target_audience=data.get("target_audience", ""),
-            budget=data.get("budget", 10000)
-        )
-        
-        from dataclasses import asdict
+        colors = branding_agent.get_color_options()
         return {
             "status": "success",
-            "data": asdict(marketing)
+            "data": colors
         }
     
     except Exception as e:
-        logger.error(f"Error building marketing strategy: {str(e)}")
+        logger.error(f"Error getting color options: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.post("/api/business-plan/compliance")
-async def check_compliance(
-    request: BusinessPlanningRequest,
-    token: Optional[str] = Depends(verify_token)
-):
-    """Check regulatory compliance requirements"""
+@app.get("/api/branding/health")
+async def branding_health():
+    """Health check for Branding Agent"""
     try:
-        if not business_planning_agent:
-            raise HTTPException(status_code=503, detail="Business Planning Agent not initialized")
+        if not branding_agent:
+            return {
+                "status": "unhealthy",
+                "agent": "not initialized",
+                "timestamp": datetime.now().isoformat()
+            }
         
-        data = request.dict()
-        compliance = await business_planning_agent.check_regulatory_compliance(
-            idea=data.get("idea", ""),
-            industry=data.get("industry", ""),
-            region=data.get("region", "United States")
-        )
-        
-        from dataclasses import asdict
-        return {
-            "status": "success",
-            "data": asdict(compliance)
-        }
+        health_status = await branding_agent.health_check()
+        health_status["timestamp"] = datetime.now().isoformat()
+        return health_status
     
     except Exception as e:
-        logger.error(f"Error checking compliance: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/business-plan/health")
-async def business_plan_health():
-    """Health check for Business Planning Agent"""
-    return {
-        "status": "ok",
-        "agent": "initialized" if business_planning_agent else "not initialized",
-        "timestamp": datetime.now().isoformat()
-    }
+        logger.error(f"Error checking branding health: {str(e)}")
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 
 # ============================================================================
@@ -2158,7 +2147,6 @@ async def marketing_strategy_health():
     return {
         "status": "ok",
         "market_research_agent": "initialized" if market_research_agent else "not initialized",
-        "business_planning_agent": "initialized" if business_planning_agent else "not initialized",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -2174,9 +2162,6 @@ async def generate_comprehensive_marketing_strategy(
             logger.error("Market Research Agent is not initialized")
             raise HTTPException(status_code=503, detail="Market Research Agent not initialized. Please check GROQ_API_KEY in backend .env file")
         
-        if not business_planning_agent:
-            logger.error("Business Planning Agent is not initialized")
-            raise HTTPException(status_code=503, detail="Business Planning Agent not initialized. Please check GROQ_API_KEY in backend .env file")
         
         logger.info("Starting comprehensive marketing strategy generation...")
         
@@ -2257,11 +2242,34 @@ async def generate_comprehensive_marketing_strategy(
         
         # Phase 2: Marketing Strategy
         logger.info("Phase 2: Building marketing strategy...")
-        marketing_strategy = await business_planning_agent.build_marketing_strategy(
-            idea=idea,
-            target_audience=target_market,
-            budget=budget
-        )
+        # Note: Marketing strategy generation removed with business planning agent
+        marketing_strategy = {
+            "total_budget": budget,
+            "customer_acquisition_strategy": "Digital marketing focus with content-driven approach",
+            "retention_strategy": "Customer success and engagement programs",
+            "channels": [
+                {
+                    "channel": "Content Marketing",
+                    "strategy": "Blog posts, whitepapers, and educational content",
+                    "estimated_cost": budget * 0.3,
+                    "expected_roi": 3.5,
+                    "timeline": "3-6 months"
+                },
+                {
+                    "channel": "Social Media",
+                    "strategy": "Organic and paid social media campaigns",
+                    "estimated_cost": budget * 0.4,
+                    "expected_roi": 2.8,
+                    "timeline": "1-3 months"
+                }
+            ],
+            "growth_tactics": [
+                "Referral programs",
+                "Partnership marketing",
+                "SEO optimization",
+                "Email marketing campaigns"
+            ]
+        }
         
         # Combine results
         from dataclasses import asdict
@@ -2313,7 +2321,7 @@ async def generate_comprehensive_marketing_strategy(
                 "key_insights": summary_data.get("key_insights", []),
                 "recommendations": summary_data.get("recommendations", [])
             },
-            "marketing_strategy": asdict(marketing_strategy)
+            "marketing_strategy": marketing_strategy
         }
         
         logger.info("Comprehensive marketing strategy generated successfully")

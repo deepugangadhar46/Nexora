@@ -826,169 +826,56 @@ export interface MarketResearchReport {
 }
 
 // ============================================================================
-// DEPRECATED: Old individual market research functions
-// These have been replaced by the comprehensive marketing strategy endpoint
-// Keeping type definitions for backwards compatibility
+// BRANDING API
 // ============================================================================
 
-// ============================================================================
-// BUSINESS PLANNING API
-// ============================================================================
+export interface LogoGenerationRequest {
+  company_name: string;
+  idea: string;
+  style?: string;
+  colors?: string;
+}
 
-export interface LeanCanvasBlock {
-  title: string;
-  content: string[];
+export interface CustomLogoRequest {
+  company_name: string;
+  custom_prompt: string;
+}
+
+export interface LogoResponse {
+  logo_id: string;
+  company_name: string;
+  prompt_used: string;
+  image_base64: string;
+  created_at: string;
+  style: string;
+  colors: string;
+}
+
+export interface StyleOption {
+  value: string;
+  label: string;
   description: string;
 }
 
-export interface LeanCanvas {
-  problem: LeanCanvasBlock;
-  solution: LeanCanvasBlock;
-  unique_value_proposition: LeanCanvasBlock;
-  unfair_advantage: LeanCanvasBlock;
-  customer_segments: LeanCanvasBlock;
-  key_metrics: LeanCanvasBlock;
-  channels: LeanCanvasBlock;
-  cost_structure: LeanCanvasBlock;
-  revenue_streams: LeanCanvasBlock;
-}
-
-export interface FinancialProjection {
-  year: number;
-  revenue: number;
-  costs: number;
-  profit: number;
-  burn_rate: number;
-  runway_months: number;
-}
-
-export interface FinancialEstimate {
-  projections: FinancialProjection[];
-  cac: number;
-  ltv: number;
-  ltv_cac_ratio: number;
-  break_even_month: number;
-  total_funding_needed: number;
-  assumptions: string[];
-}
-
-export interface TeamRole {
-  role: string;
-  responsibilities: string[];
-  skills_required: string[];
-  priority: string;
-  hiring_timeline: string;
-}
-
-export interface TeamComposition {
-  roles: TeamRole[];
-  total_team_size: number;
-  estimated_payroll_monthly: number;
-}
-
-export interface MarketingChannel {
-  channel: string;
-  strategy: string;
-  estimated_cost: number;
-  expected_roi: number;
-  timeline: string;
-}
-
-export interface MarketingStrategy {
-  channels: MarketingChannel[];
-  total_budget: number;
-  customer_acquisition_strategy: string;
-  retention_strategy: string;
-  growth_tactics: string[];
-}
-
-export interface InvestorSummary {
-  elevator_pitch: string;
-  problem_statement: string;
-  solution_overview: string;
-  market_opportunity: string;
-  business_model: string;
-  traction: string;
-  competitive_advantage: string;
-  team_highlights: string;
-  financial_ask: string;
-  use_of_funds: string[];
-  key_milestones: string[];
-}
-
-export interface ComplianceRequirement {
-  category: string;
-  requirement: string;
-  jurisdiction: string;
-  priority: string;
-  estimated_cost: number;
-  timeline: string;
-  resources: string[];
-}
-
-export interface RegulatoryCompliance {
-  requirements: ComplianceRequirement[];
-  total_compliance_cost: number;
-  critical_deadlines: string[];
-  recommended_actions: string[];
-}
-
-export interface CoFounderFeedback {
-  feedback_type: string;
-  message: string;
-  reasoning: string;
-  action_items: string[];
-}
-
-export interface BusinessPlanResponse {
-  plan_id: string;
-  business_name: string;
-  tagline: string;
-  executive_summary: string;
-  lean_canvas: LeanCanvas;
-  financial_estimate: FinancialEstimate;
-  team_composition: TeamComposition;
-  marketing_strategy: MarketingStrategy;
-  investor_summary: InvestorSummary;
-  regulatory_compliance: RegulatoryCompliance;
-  co_founder_feedback: CoFounderFeedback[];
-  pdf_url?: string;
-  docx_url?: string;
-  notion_url?: string;
-  created_at: string;
+export interface ColorOption {
+  value: string;
+  label: string;
+  description: string;
 }
 
 /**
- * Create a complete business plan
+ * Generate a logo based on company name and idea
  */
-export async function createBusinessPlan(request: {
-  idea: string;
-  industry?: string;
-  target_market?: string;
-  business_model?: string;
-  region?: string;
-  budget?: number;
-  export_formats?: string[];
-  userId?: string;
-}): Promise<BusinessPlanResponse> {
+export async function generateLogo(request: LogoGenerationRequest): Promise<LogoResponse> {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/business-plan/create`, {
+    const response = await fetch(`${API_BASE_URL}/api/branding/generate-logo`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(token && { 'Authorization': `Bearer ${token}` }),
       },
-      body: JSON.stringify({
-        idea: request.idea,
-        industry: request.industry || '',
-        target_market: request.target_market || '',
-        business_model: request.business_model || '',
-        region: request.region || 'United States',
-        budget: request.budget || 10000,
-        export_formats: request.export_formats || ['pdf', 'docx'],
-        userId: request.userId,
-      }),
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
@@ -999,32 +886,24 @@ export async function createBusinessPlan(request: {
     const data = await response.json();
     return data.data;
   } catch (error) {
-    console.error('Error creating business plan:', error);
+    console.error('Error generating logo:', error);
     throw error;
   }
 }
 
 /**
- * Generate Lean Canvas only
+ * Generate a logo with custom user prompt
  */
-export async function generateLeanCanvas(request: {
-  idea: string;
-  target_market?: string;
-  business_model?: string;
-}): Promise<LeanCanvas> {
+export async function generateCustomLogo(request: CustomLogoRequest): Promise<LogoResponse> {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/business-plan/lean-canvas`, {
+    const response = await fetch(`${API_BASE_URL}/api/branding/generate-custom-logo`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(token && { 'Authorization': `Bearer ${token}` }),
       },
-      body: JSON.stringify({
-        idea: request.idea,
-        target_market: request.target_market || '',
-        business_model: request.business_model || '',
-      }),
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
@@ -1035,127 +914,59 @@ export async function generateLeanCanvas(request: {
     const data = await response.json();
     return data.data;
   } catch (error) {
-    console.error('Error generating lean canvas:', error);
+    console.error('Error generating custom logo:', error);
     throw error;
   }
 }
 
 /**
- * Estimate financial projections
+ * Get available logo style options
  */
-export async function estimateFinancials(request: {
-  idea: string;
-  business_model?: string;
-  target_market_size?: string;
-}): Promise<FinancialEstimate> {
+export async function getStyleOptions(): Promise<StyleOption[]> {
   try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/business-plan/financials`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        idea: request.idea,
-        business_model: request.business_model || '',
-        target_market_size: request.target_market_size || '',
-      }),
+    const response = await fetch(`${API_BASE_URL}/api/branding/style-options`, {
+      method: 'GET',
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
     return data.data;
   } catch (error) {
-    console.error('Error estimating financials:', error);
+    console.error('Error getting style options:', error);
     throw error;
   }
 }
 
 /**
- * Map team roles and composition
+ * Get available logo color options
  */
-export async function mapTeamRoles(request: {
-  idea: string;
-  business_model?: string;
-  stage?: string;
-}): Promise<TeamComposition> {
+export async function getColorOptions(): Promise<ColorOption[]> {
   try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/business-plan/team`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        idea: request.idea,
-        business_model: request.business_model || '',
-        stage: request.stage || 'pre-seed',
-      }),
+    const response = await fetch(`${API_BASE_URL}/api/branding/color-options`, {
+      method: 'GET',
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
     return data.data;
   } catch (error) {
-    console.error('Error mapping team roles:', error);
-    throw error;
-  }
-}
-
-// DEPRECATED: buildMarketingStrategy - Use comprehensive marketing strategy endpoint instead
-
-/**
- * Check regulatory compliance
- */
-export async function checkRegulatoryCompliance(request: {
-  idea: string;
-  industry?: string;
-  region?: string;
-}): Promise<RegulatoryCompliance> {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/api/business-plan/compliance`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        idea: request.idea,
-        industry: request.industry || '',
-        region: request.region || 'United States',
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data;
-  } catch (error) {
-    console.error('Error checking compliance:', error);
+    console.error('Error getting color options:', error);
     throw error;
   }
 }
 
 /**
- * Check Business Planning Agent health
+ * Check Branding Agent health
  */
-export async function checkBusinessPlanningHealth() {
+export async function checkBrandingHealth() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/business-plan/health`, {
+    const response = await fetch(`${API_BASE_URL}/api/branding/health`, {
       method: 'GET',
     });
 
@@ -1166,7 +977,15 @@ export async function checkBusinessPlanningHealth() {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error checking business planning health:', error);
+    console.error('Error checking branding health:', error);
     throw error;
   }
 }
+
+// ============================================================================
+// DEPRECATED: Old individual market research functions
+// These have been replaced by the comprehensive marketing strategy endpoint
+// Keeping type definitions for backwards compatibility
+// ============================================================================
+
+

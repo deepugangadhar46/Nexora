@@ -542,8 +542,8 @@ const Navbar = () => {
                     { name: 'Dashboard', path: '/dashboard' },
                     { name: 'Idea Validation', path: '/idea-validation' },
                     { name: 'Marketing Strategy', path: '/marketing-strategy' },
-                    { name: 'Business Plan', path: '/business-plan' },
                     { name: 'MVP Development', path: '/mvp-development' },
+                    { name: 'Branding', path: '/branding' },
                     { name: 'Pricing', path: '/pricing' },
                   ].map((link) => (
                     <button
